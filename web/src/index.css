@@ -1,0 +1,22 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+html, body, #root {
+  height: 100%;
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+}
+
+body {
+  background: #fafaf9;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Handwriting feel for filled cells */
+.handwritten {
+  font-family: 'Caveat', cursive;
+  font-weight: 600;
+  font-size: 1.25rem;
+  line-height: 1.2;
+  color: #b91c1c; /* red marker */
+}
