@@ -4,9 +4,10 @@ import type { Slot } from '../hooks/usePlanSync'
 type Props = {
   slot: Slot
   onUpdate: (patch: Partial<Slot>) => void
+  isPending: boolean
 }
 
-export function MealCell({ slot, onUpdate }: Props) {
+export function MealCell({ slot, onUpdate, isPending }: Props) {
   const [editing, setEditing] = useState(false)
   const [text, setText] = useState(slot.text)
 
@@ -56,19 +57,27 @@ export function MealCell({ slot, onUpdate }: Props) {
   const fasting = slot.state === 'fasting'
 
   return (
-    <button
-      onClick={() => setEditing(true)}
-      className={`w-full min-h-[88px] sm:min-h-[100px] p-3 text-left hover:bg-amber-50 active:bg-amber-100 transition-colors ${
-        fasting ? 'bg-stone-50' : ''
-      }`}
-    >
-      {slot.text ? (
-        <span className={fasting ? 'text-stone-400 italic text-sm' : 'handwritten'}>
-          {slot.text}
-        </span>
-      ) : (
-        <span className="text-stone-300 text-xs">+ add</span>
+    <div className="relative">
+      <button
+        onClick={() => setEditing(true)}
+        className={`w-full min-h-[88px] sm:min-h-[100px] p-3 text-left hover:bg-amber-50 active:bg-amber-100 transition-colors ${
+          fasting ? 'bg-stone-50' : ''
+        }`}
+      >
+        {slot.text ? (
+          <span className={fasting ? 'text-stone-400 italic text-sm' : 'handwritten'}>
+            {slot.text}
+          </span>
+        ) : (
+          <span className="text-stone-300 text-xs">+ add</span>
+        )}
+      </button>
+      {isPending && (
+        <span
+          className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-amber-400"
+          aria-hidden="true"
+        />
       )}
-    </button>
+    </div>
   )
 }

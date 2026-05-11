@@ -7,9 +7,10 @@ const SLOTS = ['Breakfast', 'Lunch', 'Dinner']
 type Props = {
   slots: Slot[]
   onUpdate: (id: number, patch: Partial<Slot>) => void
+  pendingSlotIds: Set<number>
 }
 
-export function PlanGrid({ slots, onUpdate }: Props) {
+export function PlanGrid({ slots, onUpdate, pendingSlotIds }: Props) {
   const getSlot = (day: number, slot: number) =>
     slots.find(s => s.day === day && s.slot === slot)
 
@@ -46,6 +47,7 @@ export function PlanGrid({ slots, onUpdate }: Props) {
                       <MealCell
                         slot={slot}
                         onUpdate={(patch) => onUpdate(slot.id, patch)}
+                        isPending={pendingSlotIds.has(slot.id)}
                       />
                     )}
                   </td>
