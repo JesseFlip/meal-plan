@@ -1,144 +1,115 @@
-# FridgePlan — Phase 0 Spike
+# FridgePlan
 
-The minimum-viable loop: edit on phone → see it update on the fridge tablet in real time.
+A household meal-planning PWA that replaces a magnetic whiteboard on the refrigerator.
 
-Backend: **FastAPI + SQLite + WebSocket**
-Frontend: **Vite + React + TypeScript + Tailwind + vite-plugin-pwa**
+[![Build Status](https://github.com/JesseFlip/meal-plan/actions/workflows/ci.yml/badge.svg)](https://github.com/JesseFlip/meal-plan/actions)
+[![Live Deploy](https://img.shields.io/badge/deploy-live-brightgreen)](https://mealp.netlify.app/)
+[![License: TBD](https://img.shields.io/badge/license-TBD-lightgrey)](#)
 
-Seeded with Dorys's whiteboard plan from the May 2026 photo so you see your actual meals on first run, not Lorem Ipsum.
+FridgePlan is a real working product for a real two-person household (Jesse and his wife Dorys). It is not a SaaS product or a generic meal-planning app; it is a digital replacement for the tactile ritual of a physical whiteboard.
 
----
+![FridgePlan Grid Interface](docs/screenshot.png)
+<!-- Screenshot will be added in a follow-up PR -->
 
-## Run it locally (10 minutes)
+## What it does
 
-### 1. Backend
+FridgePlan replaces a traditional magnetic whiteboard with a digital 7×3 grid representing the days of the week and meal types (Breakfast, Lunch, Dinner). It preserves the simplicity of the original whiteboard while adding the power of digital synchronization.
 
-```bash
-cd api
-python -m venv .venv
-source .venv/bin/activate     # Windows: .venv\Scripts\activate
-pip install -r requirements.txt
-uvicorn main:app --reload --host 0.0.0.0 --port 8000
-```
+The project is designed to bridge the gap between a stationary "always-on" fridge tablet and mobile devices. Dorys, the primary user, has used a red dry-erase marker for years; this app succeeds only if it feels as natural and frictionless as that marker while ensuring the plan is accessible from anywhere.
 
-Backend now running at `http://localhost:8000`. Test it:
+## Live demo
 
-```bash
-curl http://localhost:8000/api/plan | python -m json.tool
-```
+**View the live application: [https://mealp.netlify.app/](https://mealp.netlify.app/)**
 
-You should see 21 slots (7 days × 3 meals) with Dorys's whiteboard text already populated.
-
-### 2. Frontend
-
-In a second terminal:
-
-```bash
-cd web
-npm install
-npm run dev
-```
-
-Open `http://localhost:5173` on your laptop. Tap a cell, edit it, hit Enter. Should save instantly.
-
-### 3. The "wow" moment — multi-device sync
-
-Open the same URL on your phone (use your machine's LAN IP, e.g. `http://192.168.1.50:5173`). Edit a cell on the phone. Watch the laptop update in real time. **That's the whole product.**
-
----
+Visitors to the demo can see the current week's meal plan in real time. You can tap any cell to edit the text or change the meal state. Because multi-device synchronization is the core feature of the product, any changes you make in the demo will be visible to other simultaneous visitors and are pre-seeded with real-world data from the owner's household.
 
 ## Architecture
 
-```
-Phone PWA ──┐
-            ├─► REST /api/plan (GET, PUT)        ┌─► SQLite (fridgeplan.db)
-Tablet PWA ─┤                          ──► FastAPI ┤
-            ├─► WebSocket /ws                     └─► ConnectionManager (broadcast)
-Laptop ─────┘
-```
-
-- Any PUT triggers a broadcast to every connected WebSocket client
-- Auto-reconnect with 2-second backoff if the WS drops
-- Optimistic UI updates — feels instant even on slow connections
-- Service worker caches `/api/plan` for offline display (network-first, 3s timeout)
-
-## Data model
-
-```python
-MealSlot(id, day [0-6], slot [0-2], text, person, state, updated_at)
-
-# state: planned | fasting | skipped | eaten
-# person: None=both, "jesse", "dorys"
+```text
+Phone PWA + Tablet PWA + Laptop
+       │
+       ▼
+WebSocket (Live Sync) + REST (CRUD)
+       │
+       ▼
+FastAPI Backend (Railway)
+       │
+       ▼
+Postgres / SQLite + WebSocket Fanout
+       │
+       ▼
+All Connected Clients
 ```
 
-Slot 0 = Breakfast, 1 = Lunch, 2 = Dinner. Day 0 = Monday.
+## Tech stack
 
-Type "fast" or "fasting" into a cell — it auto-tags state and renders italic-grey (so Saturday breakfast doesn't look like a missing entry).
+This stack is intentionally fixed as part of the project's [Constitution](specs/constitution.md). Changes require a formal constitutional amendment.
 
----
+- **Backend**: Python 3.12, FastAPI, SQLModel, SQLite (dev) / Postgres (prod)
+- **Frontend**: Vite 5, React 18, TypeScript, Tailwind 3, `vite-plugin-pwa`
+- **Real-time**: native WebSockets (no Socket.IO, no Pusher, no third-party SaaS)
+- **Hosting**: Railway (backend), Netlify (frontend)
+- **CI**: GitHub Actions
+- **Auth**: none in MVP — relies on private deployment.
 
-## Deploy when you're ready
+## Local development
 
-- **Backend**: push `api/` to Railway. It'll detect FastAPI and run `uvicorn`. Add Postgres later if you outgrow SQLite (you won't).
-- **Frontend**: push `web/` to Netlify. Set `VITE_API_URL` and `VITE_WS_URL` env vars to your Railway URLs.
-- **Even better**: run the backend on a box inside your tailnet (your Pi, your laptop, a VPS with Tailscale). Set the PWA's API URL to the tailnet IP. No public exposure, no auth needed.
+### Prerequisites
+- Python 3.12+
+- Node.js 20+
 
----
-
-## Fridge tablet kiosk setup
-
-1. Install [Fully Kiosk Browser](https://www.fully-kiosk.com/) on the Android tablet
-2. Point it at your deployed PWA URL
-3. Settings:
-   - Auto-start on boot: ON
-   - Keep screen on: ON
-   - Wake on touch: ON
-   - Hide system UI: ON
-   - Screensaver schedule: 10pm dim, 6am full bright
-4. Mount on fridge. Done.
-
----
-
-## What's missing (intentionally)
-
-This is the spike. The point is to prove the loop works. Not in v0:
-
-- ❌ Auth (Tailscale handles it)
-- ❌ Multiple plans / weeks (just edit the current one)
-- ❌ Grocery list (Phase 1)
-- ❌ Handwriting canvas overlay (Phase 2 — once XP-Pen Android compat verified)
-- ❌ Macros / photos / weight tracking (Phase 3+)
-- ❌ Recipe library, ML suggestions (someday)
-
-See `docs/PRD.md` for the full roadmap.
-
----
-
-## Useful endpoints during dev
+### Setup
 
 ```bash
-# Health check
-curl http://localhost:8000/api/health
-
-# Get current plan
-curl http://localhost:8000/api/plan
-
-# Edit a slot (id from the GET response)
-curl -X PUT http://localhost:8000/api/plan/3 \
-  -H "Content-Type: application/json" \
-  -d '{"text": "fajita bowls"}'
-
-# Reset to the whiteboard seed
-curl -X POST http://localhost:8000/api/reset
+git clone https://github.com/JesseFlip/meal-plan.git
+cd meal-plan/fridgeplan-v1/fridgeplan
 ```
 
----
+### Backend
+```bash
+cd api
+python -m venv venv
+# Windows:
+.\venv\Scripts\activate
+# Unix:
+source venv/bin/activate
+pip install -r requirements.txt
+uvicorn main:app --reload --port 8000
+```
 
-## Hand it to Dorys
+### Frontend
+```bash
+cd web
+npm install
+npm run dev -- --port 5173
+```
 
-Once it's running on the fridge, walk away. Watch what she does — or doesn't do — for a week. The product question isn't "does it work?" It's "does she pick this up instead of the red marker?"
+By default, the backend runs on `http://localhost:8000` and the frontend on `http://localhost:5173`. The local SQLite database will automatically seed with real data on the first run.
 
-If yes → build Phase 1.
-If no → ask her what's missing, fix that, try again.
+## Project methodology
 
-Built by Jesse, May 2026.
+FridgePlan is built using **spec-driven development** through the Antigravity IDE. Every feature is specified and planned before a single line of code is written.
+
+- **Workflows**: See the automated lifecycle in [.agents/workflows/](.agents/workflows/)
+- **Governance**: Non-negotiable principles are encoded in [specs/constitution.md](specs/constitution.md)
+
+This README and the detailed [spec history](specs/) together form a transparent log of the project's evolution.
+
+## Roadmap
+
+The full feature roadmap is maintained in [docs/PRD.md](docs/PRD.md).
+
+- **Phase 1 (MVP)**: Weekly grid, manual/auto sync modes, grocery list view, and kiosk-mode polish.
+- **Phase 2 (Handwriting)**: Digital ink layer for tactile XP-Pen input on the fridge tablet.
+- **Phase 3 (Smart Features)**: Handwriting recognition, macro tracking, and meal photography.
+
+## Contributing
+
+FridgePlan is a private household project. While the codebase is open for inspection and learning, external contributions and Pull Requests are not currently accepted. 
+
+Please refer to [specs/constitution.md](specs/constitution.md) and [AGENTS.md](AGENTS.md) to understand the strict rules and architectural constraints that govern this repository.
+
+## Acknowledgments
+
+- Built collaboratively by Jesse Flippen with assistance from Anthropic's Claude during architecture and scaffolding phases.
+- Implemented through spec-driven development with Google's Antigravity IDE.
