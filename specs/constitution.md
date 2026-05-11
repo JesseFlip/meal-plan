@@ -2,7 +2,7 @@
 
 > The non-negotiable principles for this project. Every spec, every PR, every deploy must conform. To change a principle here requires explicit owner approval via a constitutional-amendment spec — not a normal feature spec.
 
-**Version**: 0.1 (initial draft — agent should refine via `/constitution` and request owner approval before promoting to v1.0)
+**Version**: 1.0 (Ratified)
 
 ---
 
@@ -22,7 +22,7 @@ This is not a SaaS. It is not a beachhead for a larger product. It is a tool for
 
 4. **Privacy by default.** No location access, no microphone, no camera, no contacts, no calendar, no file system, unless a specific spec explicitly justifies it and the owner approves.
 
-5. **Spanish is a first-class language.** Dorys is a native Spanish speaker. Hardcoded English strings are bugs. All user-facing text must be i18n-wrappable from creation, even when shipping English-only.
+5. **Spanish is a first-class language.** Dorys is a native Spanish speaker. Hardcoded English strings are bugs. All user-facing text must be i18n-wrappable from creation, even when shipping English-only. **Enforcement**: Every UI component PR must be checked for hardcoded strings. If a string is added, it must be extracted to a translation key immediately.
 
 6. **The fridge tablet is the primary surface.** Mobile is secondary; laptop is tertiary. Every UI decision is tested against "does this work for Dorys on the fridge?" first.
 
@@ -56,6 +56,7 @@ Changing any of these requires a constitutional-amendment spec, not a normal fea
 - **Squash merges.** Linear history on `main`.
 - **One concern per PR.** No refactors bundled into feature PRs.
 - **Specs sync with code.** Every PR runs `/sync-spec` before merge.
+- **Atomic PRs.** Refactors, dependency updates, and feature work must never share a PR.
 
 ## Quality Bar
 
@@ -106,4 +107,5 @@ To change a principle in this document:
 
 ## History
 
+- **v1.0** (2026-05-10) — Ratified by owner. Added enforcement on Principle 5, added Atomic PRs commitment. Proposed Local-first principle rejected; offline behavior deferred to feature-level spec if/when needed.
 - **v0.1** (initial draft) — bootstrapped by Claude as project handoff. Agent to refine via `/constitution` and seek owner approval to promote to v1.0.
