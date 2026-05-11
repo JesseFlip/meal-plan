@@ -134,11 +134,11 @@ curl -X POST http://localhost:8000/api/reset
 
 ---
 
-## Hand it to Dorys
+## Hand it to Client
 
 Once it's running on the fridge, walk away. Watch what she does — or doesn't do — for a week. The product question isn't "does it work?" It's "does she pick this up instead of the red marker?"
 
 If yes → build Phase 1.
 If no → ask her what's missing, fix that, try again.
 
-Built by Jesse, May 2026.
+Built by Jesse F., May 2026.
