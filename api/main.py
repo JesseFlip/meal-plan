@@ -67,10 +67,28 @@ class GroceryItem(SQLModel, table=True):
     household_id: str = Field(foreign_key="household.id", index=True)
     name: str
     category: str  # Produce, Protein, Dairy, Pantry, Other
+    store: str = "Other"  # Costco, Central Market, Trader Joes, Tom Thumb, Whole Foods, Target, La Michocana, Other
     bought: bool = False
     is_derived: bool = False  # True if auto-extracted from meal plan
     source_meal_id: Optional[int] = None  # Link to MealSlot if derived
     created_at: datetime = Field(default_factory=datetime.utcnow)
+
+
+class MealHistory(SQLModel, table=True):
+    id: Optional[int] = Field(default=None, primary_key=True)
+    household_id: str = Field(foreign_key="household.id", index=True)
+    meal_name: str = Field(index=True)  # Unique meal name
+    use_count: int = 0  # How many times this meal was used
+    last_used: datetime = Field(default_factory=datetime.utcnow)
+
+
+class DayCompliance(SQLModel, table=True):
+    id: Optional[int] = Field(default=None, primary_key=True)
+    household_id: str = Field(foreign_key="household.id", index=True)
+    day: int = Field(index=True)  # 0=Mon ... 6=Sun
+    compliant: bool = False  # Whether they ate according to plan
+    notes: str = ""  # Optional notes about the day
+    updated_at: datetime = Field(default_factory=datetime.utcnow)
 
 
 def slot_to_dict(s: MealSlot) -> dict:
@@ -92,6 +110,7 @@ def grocery_to_dict(g: GroceryItem) -> dict:
         "household_id": g.household_id,
         "name": g.name,
         "category": g.category,
+        "store": g.store,
         "bought": g.bought,
         "is_derived": g.is_derived,
         "source_meal_id": g.source_meal_id,
@@ -570,6 +589,31 @@ async def update_slot(
             if key in payload:
                 setattr(slot, key, payload[key])
         slot.updated_at = datetime.utcnow()
+
+        # Track meal history when text is updated
+        if "text" in payload and payload["text"].strip():
+            meal_name = payload["text"].strip()
+            # Don't track "fasting" or empty meals
+            if meal_name.lower() not in ("fasting", ""):
+                history = session.exec(
+                    select(MealHistory).where(
+                        MealHistory.household_id == hh_id,
+                        MealHistory.meal_name == meal_name
+                    )
+                ).first()
+
+                if history:
+                    history.use_count += 1
+                    history.last_used = datetime.utcnow()
+                else:
+                    history = MealHistory(
+                        household_id=hh_id,
+                        meal_name=meal_name,
+                        use_count=1,
+                        last_used=datetime.utcnow()
+                    )
+                session.add(history)
+
         session.add(slot)
         session.commit()
         session.refresh(slot)
@@ -578,6 +622,78 @@ async def update_slot(
             {"type": "slot.updated", "data": data, "household_id": hh_id}
         )
         return data
+
+
+@app.get("/api/meals/history")
+def get_meal_history(household_id: str = Header(None, alias="X-Household-ID")):
+    """Get meal history for autocomplete, ordered by usage frequency and recency."""
+    hh_id = get_household_id(household_id)
+
+    with Session(engine) as session:
+        # Get all meal history, ordered by use_count desc, then last_used desc
+        history = session.exec(
+            select(MealHistory)
+            .where(MealHistory.household_id == hh_id)
+            .order_by(MealHistory.use_count.desc(), MealHistory.last_used.desc())
+            .limit(50)  # Limit to top 50 most used meals
+        ).all()
+
+        return [{"meal_name": h.meal_name, "use_count": h.use_count} for h in history]
+
+
+@app.get("/api/compliance")
+def get_compliance(household_id: str = Header(None, alias="X-Household-ID")):
+    """Get compliance status for all days of the week."""
+    hh_id = get_household_id(household_id)
+
+    with Session(engine) as session:
+        compliance_records = session.exec(
+            select(DayCompliance).where(DayCompliance.household_id == hh_id)
+        ).all()
+
+        # Return compliance for all 7 days (0=Mon...6=Sun)
+        compliance_map = {c.day: c.compliant for c in compliance_records}
+        return [{"day": day, "compliant": compliance_map.get(day, False)} for day in range(7)]
+
+
+@app.post("/api/compliance/{day}")
+def toggle_compliance(
+    day: int,
+    payload: dict,
+    household_id: str = Header(None, alias="X-Household-ID")
+):
+    """Toggle compliance status for a specific day."""
+    hh_id = get_household_id(household_id)
+
+    if day < 0 or day > 6:
+        raise HTTPException(400, "Day must be between 0 and 6")
+
+    with Session(engine) as session:
+        compliance = session.exec(
+            select(DayCompliance).where(
+                DayCompliance.household_id == hh_id,
+                DayCompliance.day == day
+            )
+        ).first()
+
+        compliant = payload.get("compliant", False)
+
+        if compliance:
+            compliance.compliant = compliant
+            compliance.updated_at = datetime.utcnow()
+        else:
+            compliance = DayCompliance(
+                household_id=hh_id,
+                day=day,
+                compliant=compliant,
+                updated_at=datetime.utcnow()
+            )
+
+        session.add(compliance)
+        session.commit()
+        session.refresh(compliance)
+
+        return {"day": compliance.day, "compliant": compliance.compliant}
 
 
 @app.post("/api/reset")
@@ -628,12 +744,14 @@ def add_grocery(
         raise HTTPException(400, "Item name required")
 
     category = categorize_ingredient(name)
+    store = payload.get("store", "Other")  # Default to "Other" if not specified
 
     with Session(engine) as session:
         item = GroceryItem(
             household_id=hh_id,
             name=name,
             category=category,
+            store=store,
             bought=False,
             is_derived=False,
             source_meal_id=None,

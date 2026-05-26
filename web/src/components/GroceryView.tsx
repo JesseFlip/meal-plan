@@ -1,14 +1,17 @@
 import { useState } from 'react'
 import { useGroceries, GroceryItem } from '../hooks/useGroceries'
 
+const STORES = ['Costco', 'Central Market', 'Trader Joes', 'Tom Thumb', 'Whole Foods', 'Target', 'La Michocana', 'Other']
+
 export function GroceryView() {
   const { items, loading, addGrocery, toggleGrocery, clearBought, syncGroceries } = useGroceries()
   const [newItemName, setNewItemName] = useState('')
+  const [selectedStore, setSelectedStore] = useState('Other')
 
   const handleAdd = (e: React.FormEvent) => {
     e.preventDefault()
     if (!newItemName.trim()) return
-    addGrocery(newItemName.trim())
+    addGrocery(newItemName.trim(), selectedStore)
     setNewItemName('')
   }
 
@@ -20,43 +23,53 @@ export function GroceryView() {
     )
   }
 
-  const categories = ['Produce', 'Protein', 'Dairy', 'Pantry', 'Other']
-  const groupedItems = categories.reduce((acc, cat) => {
-    acc[cat] = items.filter(item => item.category === cat)
+  const groupedItems = STORES.reduce((acc, store) => {
+    acc[store] = items.filter(item => item.store === store)
     return acc
   }, {} as Record<string, GroceryItem[]>)
 
   return (
     <div className="max-w-2xl mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
-      <form onSubmit={handleAdd} className="relative">
-        <input
-          type="text"
-          placeholder="Add something to the list..."
-          className="w-full bg-white border border-stone-200 rounded-2xl px-6 py-4 pr-16 shadow-sm focus:outline-none focus:ring-2 focus:ring-stone-900/5 transition-all text-lg placeholder:text-stone-300"
-          value={newItemName}
-          onChange={(e) => setNewItemName(e.target.value)}
-        />
-        <button
-          type="submit"
-          className="absolute right-3 top-1/2 -translate-y-1/2 bg-stone-900 text-white w-10 h-10 rounded-xl flex items-center justify-center hover:bg-stone-800 transition-colors"
-          aria-label="Add item"
+      <form onSubmit={handleAdd} className="space-y-3">
+        <div className="relative">
+          <input
+            type="text"
+            placeholder="Add something to the list..."
+            className="w-full bg-white border border-stone-200 rounded-2xl px-6 py-4 pr-16 shadow-sm focus:outline-none focus:ring-2 focus:ring-stone-900/5 transition-all text-lg placeholder:text-stone-300"
+            value={newItemName}
+            onChange={(e) => setNewItemName(e.target.value)}
+          />
+          <button
+            type="submit"
+            className="absolute right-3 top-1/2 -translate-y-1/2 bg-stone-900 text-white w-10 h-10 rounded-xl flex items-center justify-center hover:bg-stone-800 transition-colors"
+            aria-label="Add item"
+          >
+            <span className="text-xl">+</span>
+          </button>
+        </div>
+        <select
+          value={selectedStore}
+          onChange={(e) => setSelectedStore(e.target.value)}
+          className="w-full bg-white border border-stone-200 rounded-2xl px-6 py-3 shadow-sm focus:outline-none focus:ring-2 focus:ring-stone-900/5 transition-all text-base text-stone-700"
         >
-          <span className="text-xl">+</span>
-        </button>
+          {STORES.map(store => (
+            <option key={store} value={store}>{store}</option>
+          ))}
+        </select>
       </form>
 
       <div className="space-y-6">
-        {categories.map(cat => {
-          const catItems = groupedItems[cat]
-          if (catItems.length === 0) return null
+        {STORES.map(store => {
+          const storeItems = groupedItems[store]
+          if (storeItems.length === 0) return null
 
           return (
-            <section key={cat} className="space-y-3">
+            <section key={store} className="space-y-3">
               <h3 className="text-xs font-bold tracking-widest text-stone-400 uppercase px-1">
-                {cat}
+                {store}
               </h3>
               <div className="bg-white border border-stone-100 rounded-2xl shadow-sm divide-y divide-stone-50 overflow-hidden">
-                {catItems.map(item => (
+                {storeItems.map(item => (
                   <button
                     key={item.id}
                     onClick={() => toggleGrocery(item.id, !item.bought)}

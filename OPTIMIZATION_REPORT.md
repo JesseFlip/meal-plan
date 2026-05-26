@@ -256,17 +256,7 @@ PIN_SECRET=123456
 
 ---
 
-### Phase 2 — Handwriting & Stylus (As Planned)
-
-**No changes to original plan**. Includes:
-- Canvas overlay on meal cells
-- XP-Pen Android compatibility
-- Stroke persistence + PNG rasterization
-- Drawing tools (eraser, thickness, undo)
-
----
-
-### Phase 3 — Smart Kitchen (Enhanced)
+### Phase 2 — Smart Kitchen (Enhanced)
 
 #### Original Features:
 - Handwriting recognition (ML Kit)
@@ -580,7 +570,7 @@ VITE_WS_URL=wss://fridgeplan-api.railway.app/ws
 1. Fix test database configuration
 2. Add i18n language switcher UI
 3. Deploy Feature 002 (Grocery List) to production
-4. Physical device testing (XP-Pen, tablet touch targets)
+4. Physical device testing (tablet touch targets)
 
 ### Phase 1.5 (1-2 Months)
 1. Multi-household support
@@ -589,23 +579,16 @@ VITE_WS_URL=wss://fridgeplan-api.railway.app/ws
 4. IndexedDB offline editing
 
 ### Phase 2 (2-3 Months)
-1. Handwriting canvas overlay
-2. XP-Pen integration testing
-3. Stroke persistence
-4. Drawing tools UI
+1. Recipe library
+2. Meal photos
+3. Nutrition tracking (opt-in)
 
 ### Phase 3 (3-4 Months)
-1. ML Kit handwriting recognition
-2. Recipe library
-3. Meal photos
-4. Nutrition tracking (opt-in)
-
-### Phase 4 (4-6 Months)
 1. Anonymous recipe sharing
 2. Meal plan templates
 3. Public recipe gallery
 
-### Phase 5 (6-12 Months)
+### Phase 4 (4-6 Months)
 1. Budget tracking
 2. Meal frequency analytics
 3. Mobile app evaluation

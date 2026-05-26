@@ -1,5 +1,6 @@
 import { MealCell } from './MealCell'
 import type { Slot } from '../hooks/usePlanSync'
+import { useCompliance } from '../hooks/useCompliance'
 
 const DAYS = ['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN']
 const SLOTS = ['Breakfast', 'Lunch', 'Dinner']
@@ -11,8 +12,12 @@ type Props = {
 }
 
 export function PlanGrid({ slots, onUpdate, pendingSlotIds }: Props) {
+  const { compliance, toggleDay } = useCompliance()
   const getSlot = (day: number, slot: number) =>
     slots.find(s => s.day === day && s.slot === slot)
+
+  const isCompliant = (day: number) =>
+    compliance.find(c => c.day === day)?.compliant || false
 
   return (
     <div className="bg-white rounded-xl shadow-sm border border-stone-200 overflow-x-auto">
@@ -20,12 +25,21 @@ export function PlanGrid({ slots, onUpdate, pendingSlotIds }: Props) {
         <thead>
           <tr>
             <th className="bg-stone-900 text-stone-400 p-3 text-xs font-medium w-24 sm:w-28"></th>
-            {DAYS.map(d => (
+            {DAYS.map((d, idx) => (
               <th
                 key={d}
                 className="bg-stone-900 text-white p-3 text-xs font-bold tracking-widest text-center min-w-[120px] sm:min-w-[140px]"
               >
-                {d}
+                <div className="flex flex-col items-center gap-2">
+                  <span>{d}</span>
+                  <button
+                    onClick={() => toggleDay(idx)}
+                    className="text-2xl hover:scale-110 transition-transform"
+                    title={isCompliant(idx) ? "Ate as planned! Click to unmark" : "Click to mark as compliant"}
+                  >
+                    {isCompliant(idx) ? '😊' : '⚪'}
+                  </button>
+                </div>
               </th>
             ))}
           </tr>
