@@ -13,6 +13,44 @@ export type Slot = {
 const API = import.meta.env.VITE_API_URL || 'http://localhost:8000'
 const WS_URL = import.meta.env.VITE_WS_URL || 'ws://localhost:8000/ws'
 
+// Household ID management
+const getHouseholdId = (): string | null => {
+  return localStorage.getItem('fridgeplan.householdId')
+}
+
+const setHouseholdId = (id: string) => {
+  localStorage.setItem('fridgeplan.householdId', id)
+}
+
+const initializeHousehold = async (): Promise<string> => {
+  try {
+    const response = await fetch(`${API}/api/household/init`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name: 'My Household' })
+    })
+    if (response.ok) {
+      const data = await response.json()
+      setHouseholdId(data.id)
+      return data.id
+    }
+  } catch (e) {
+    console.error('Failed to initialize household:', e)
+  }
+  throw new Error('Failed to initialize household')
+}
+
+const getHeaders = async () => {
+  let householdId = getHouseholdId()
+  if (!householdId) {
+    householdId = await initializeHousehold()
+  }
+  return {
+    'Content-Type': 'application/json',
+    'X-Household-ID': householdId
+  }
+}
+
 export function usePlanSync() {
   const [slots, setSlots] = useState<Slot[]>([])
   const [connected, setConnected] = useState(false)
@@ -71,7 +109,8 @@ export function usePlanSync() {
   // ── Data fetching ──────────────────────────────────────────────────────────
   const loadPlan = async () => {
     try {
-      const r = await fetch(`${API}/api/plan`)
+      const headers = await getHeaders()
+      const r = await fetch(`${API}/api/plan`, { headers })
       if (r.ok) {
         const data = await r.json()
         if (!cancelledRef.current) setSlots(data)
@@ -95,7 +134,8 @@ export function usePlanSync() {
    */
   const reconcileAfterReconnect = async () => {
     try {
-      const r = await fetch(`${API}/api/plan`)
+      const headers = await getHeaders()
+      const r = await fetch(`${API}/api/plan`, { headers })
       if (!r.ok) return
       const serverSlots: Slot[] = await r.json()
 
@@ -195,9 +235,10 @@ export function usePlanSync() {
     if (syncModeRef.current === 'auto') {
       // Auto: push immediately (existing behaviour).
       try {
+        const headers = await getHeaders()
         const resp = await fetch(`${API}/api/plan/${id}`, {
           method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
+          headers,
           body: JSON.stringify(patch)
         })
         if (resp.ok) {
@@ -228,11 +269,12 @@ export function usePlanSync() {
     refreshPending() // resets pendingCount → 0 and pendingSlotIds → empty Set
 
     // Push local edits to server in queue order.
+    const headers = await getHeaders()
     for (const { id, patch } of localEdits) {
       try {
         const resp = await fetch(`${API}/api/plan/${id}`, {
           method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
+          headers,
           body: JSON.stringify(patch)
         })
         if (resp.ok) {
