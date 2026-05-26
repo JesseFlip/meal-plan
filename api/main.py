@@ -18,13 +18,21 @@ from contextlib import asynccontextmanager
 from datetime import datetime
 from typing import Optional, List
 
-from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect, Request, Header
+from fastapi import (
+    FastAPI,
+    HTTPException,
+    WebSocket,
+    WebSocketDisconnect,
+    Request,
+    Header,
+)
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from sqlmodel import Field, Session, SQLModel, create_engine, select
 
 
 # ---------- Models ----------
+
 
 class Household(SQLModel, table=True):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()), primary_key=True)
@@ -46,11 +54,11 @@ class HouseholdSettings(SQLModel, table=True):
 class MealSlot(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
     household_id: str = Field(foreign_key="household.id", index=True)
-    day: int             # 0=Mon ... 6=Sun
-    slot: int            # 0=Breakfast, 1=Lunch, 2=Dinner
+    day: int  # 0=Mon ... 6=Sun
+    slot: int  # 0=Breakfast, 1=Lunch, 2=Dinner
     text: str = ""
-    person: Optional[str] = None   # None=both, "jesse", "dorys"
-    state: str = "planned"         # planned | fasting | skipped | eaten
+    person: Optional[str] = None  # None=both, "jesse", "dorys"
+    state: str = "planned"  # planned | fasting | skipped | eaten
     updated_at: datetime = Field(default_factory=datetime.utcnow)
 
 
@@ -126,18 +134,18 @@ engine = create_engine(
 # Seed data from Dorys's actual whiteboard photo (May 2026)
 SEED_PLAN = [
     # (day, slot, text, person, state)
-    (0, 0, "egg bites", None, "planned"),                            # Mon breakfast
-    (1, 0, "egg tacos", None, "planned"),                            # Tue breakfast
-    (1, 1, "leftover / sandwich", None, "planned"),                  # Tue lunch (split)
-    (1, 2, "Fish + green beans", None, "planned"),                   # Tue dinner
-    (2, 0, "yogurt + coffee", None, "planned"),                      # Wed breakfast
-    (2, 1, "salad / ground beef", None, "planned"),                  # Wed lunch
-    (3, 0, "egg bites", None, "planned"),                            # Thu breakfast
-    (3, 1, "sandwich", None, "planned"),                             # Thu lunch
-    (4, 0, "boiled eggs", None, "planned"),                          # Fri breakfast
-    (4, 1, "chicken salad", None, "planned"),                        # Fri lunch
-    (5, 0, "Fasting", None, "fasting"),                              # Sat breakfast
-    (6, 2, "Shrimp salad", None, "planned"),                         # Sun dinner
+    (0, 0, "egg bites", None, "planned"),  # Mon breakfast
+    (1, 0, "egg tacos", None, "planned"),  # Tue breakfast
+    (1, 1, "leftover / sandwich", None, "planned"),  # Tue lunch (split)
+    (1, 2, "Fish + green beans", None, "planned"),  # Tue dinner
+    (2, 0, "yogurt + coffee", None, "planned"),  # Wed breakfast
+    (2, 1, "salad / ground beef", None, "planned"),  # Wed lunch
+    (3, 0, "egg bites", None, "planned"),  # Thu breakfast
+    (3, 1, "sandwich", None, "planned"),  # Thu lunch
+    (4, 0, "boiled eggs", None, "planned"),  # Fri breakfast
+    (4, 1, "chicken salad", None, "planned"),  # Fri lunch
+    (5, 0, "Fasting", None, "fasting"),  # Sat breakfast
+    (6, 2, "Shrimp salad", None, "planned"),  # Sun dinner
 ]
 
 
@@ -163,7 +171,7 @@ def seed_if_empty():
             first_day_of_week=0,
             plan_duration_days=7,
             dietary_tags="",
-            language="en"
+            language="en",
         )
         session.add(settings)
 
@@ -172,14 +180,16 @@ def seed_if_empty():
         for day in range(7):
             for slot in range(3):
                 text, person, state = filled.get((day, slot), ("", None, "planned"))
-                session.add(MealSlot(
-                    household_id=default_household.id,
-                    day=day,
-                    slot=slot,
-                    text=text,
-                    person=person,
-                    state=state
-                ))
+                session.add(
+                    MealSlot(
+                        household_id=default_household.id,
+                        day=day,
+                        slot=slot,
+                        text=text,
+                        person=person,
+                        state=state,
+                    )
+                )
 
         session.commit()
 
@@ -189,57 +199,91 @@ def seed_if_empty():
 # Ingredient categorization map (English and Spanish)
 INGREDIENT_CATEGORIES = {
     # Produce
-    "lettuce": "Produce", "lechuga": "Produce",
-    "tomato": "Produce", "tomate": "Produce",
-    "onion": "Produce", "cebolla": "Produce",
-    "pepper": "Produce", "pimiento": "Produce",
-    "cucumber": "Produce", "pepino": "Produce",
-    "carrot": "Produce", "zanahoria": "Produce",
-    "spinach": "Produce", "espinaca": "Produce",
-    "broccoli": "Produce", "brócoli": "Produce",
-    "green beans": "Produce", "ejotes": "Produce",
-    "avocado": "Produce", "aguacate": "Produce",
+    "lettuce": "Produce",
+    "lechuga": "Produce",
+    "tomato": "Produce",
+    "tomate": "Produce",
+    "onion": "Produce",
+    "cebolla": "Produce",
+    "bell pepper": "Produce",
+    "pimiento": "Produce",
+    "cucumber": "Produce",
+    "pepino": "Produce",
+    "carrot": "Produce",
+    "zanahoria": "Produce",
+    "spinach": "Produce",
+    "espinaca": "Produce",
+    "broccoli": "Produce",
+    "brócoli": "Produce",
+    "green beans": "Produce",
+    "ejotes": "Produce",
+    "avocado": "Produce",
+    "aguacate": "Produce",
     "cilantro": "Produce",
-    "lime": "Produce", "limón": "Produce",
+    "lime": "Produce",
+    "limón": "Produce",
     "lemon": "Produce",
-    "garlic": "Produce", "ajo": "Produce",
-
+    "garlic": "Produce",
+    "ajo": "Produce",
     # Protein
-    "chicken": "Protein", "pollo": "Protein",
-    "beef": "Protein", "carne": "Protein",
-    "pork": "Protein", "cerdo": "Protein",
-    "fish": "Protein", "pescado": "Protein",
-    "shrimp": "Protein", "camarón": "Protein",
-    "salmon": "Protein", "salmón": "Protein",
-    "tuna": "Protein", "atún": "Protein",
-    "turkey": "Protein", "pavo": "Protein",
-    "eggs": "Protein", "huevos": "Protein",
-    "egg": "Protein", "huevo": "Protein",
+    "chicken": "Protein",
+    "pollo": "Protein",
+    "beef": "Protein",
+    "carne": "Protein",
+    "pork": "Protein",
+    "cerdo": "Protein",
+    "fish": "Protein",
+    "pescado": "Protein",
+    "shrimp": "Protein",
+    "camarón": "Protein",
+    "salmon": "Protein",
+    "salmón": "Protein",
+    "tuna": "Protein",
+    "atún": "Protein",
+    "turkey": "Protein",
+    "pavo": "Protein",
+    "eggs": "Protein",
+    "huevos": "Protein",
+    "egg": "Protein",
+    "huevo": "Protein",
     "tofu": "Protein",
-    "ground beef": "Protein", "carne molida": "Protein",
-
+    "ground beef": "Protein",
+    "carne molida": "Protein",
     # Dairy
-    "milk": "Dairy", "leche": "Dairy",
-    "cheese": "Dairy", "queso": "Dairy",
+    "milk": "Dairy",
+    "leche": "Dairy",
+    "cheese": "Dairy",
+    "queso": "Dairy",
     "yogurt": "Dairy",
-    "butter": "Dairy", "mantequilla": "Dairy",
-    "cream": "Dairy", "crema": "Dairy",
+    "butter": "Dairy",
+    "mantequilla": "Dairy",
+    "cream": "Dairy",
+    "crema": "Dairy",
     "sour cream": "Dairy",
-
     # Pantry
-    "rice": "Pantry", "arroz": "Pantry",
-    "beans": "Pantry", "frijoles": "Pantry",
+    "rice": "Pantry",
+    "arroz": "Pantry",
+    "beans": "Pantry",
+    "frijoles": "Pantry",
     "pasta": "Pantry",
-    "bread": "Pantry", "pan": "Pantry",
+    "bread": "Pantry",
+    "pan": "Pantry",
     "tortilla": "Pantry",
-    "oil": "Pantry", "aceite": "Pantry",
+    "oil": "Pantry",
+    "aceite": "Pantry",
     "olive oil": "Pantry",
-    "salt": "Pantry", "sal": "Pantry",
-    "pepper": "Pantry", "pimienta": "Pantry",
-    "sugar": "Pantry", "azúcar": "Pantry",
-    "flour": "Pantry", "harina": "Pantry",
-    "oats": "Pantry", "avena": "Pantry",
-    "coffee": "Pantry", "café": "Pantry",
+    "salt": "Pantry",
+    "sal": "Pantry",
+    "pepper": "Pantry",
+    "pimienta": "Pantry",
+    "sugar": "Pantry",
+    "azúcar": "Pantry",
+    "flour": "Pantry",
+    "harina": "Pantry",
+    "oats": "Pantry",
+    "avena": "Pantry",
+    "coffee": "Pantry",
+    "café": "Pantry",
     "sandwich": "Pantry",
 }
 
@@ -290,6 +334,7 @@ def categorize_ingredient(ingredient: str) -> str:
 
 # ---------- WebSocket Manager ----------
 
+
 class ConnectionManager:
     def __init__(self):
         self.active: List[WebSocket] = []
@@ -317,6 +362,7 @@ manager = ConnectionManager()
 
 
 # ---------- App ----------
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -370,6 +416,7 @@ async def pin_auth_middleware(request: Request, call_next):
 
 # ---------- Household Helpers ----------
 
+
 def get_household_id(x_household_id: Optional[str] = Header(None)) -> str:
     """
     Extract household_id from X-Household-ID header.
@@ -395,6 +442,7 @@ def health():
 
 # ---------- Household Management Endpoints ----------
 
+
 @app.post("/api/household/init")
 def initialize_household(payload: dict):
     """
@@ -416,21 +464,23 @@ def initialize_household(payload: dict):
             first_day_of_week=0,
             plan_duration_days=7,
             dietary_tags="",
-            language="en"
+            language="en",
         )
         session.add(settings)
 
         # Create empty meal plan
         for day in range(7):
             for slot in range(3):
-                session.add(MealSlot(
-                    household_id=household.id,
-                    day=day,
-                    slot=slot,
-                    text="",
-                    person=None,
-                    state="planned"
-                ))
+                session.add(
+                    MealSlot(
+                        household_id=household.id,
+                        day=day,
+                        slot=slot,
+                        text="",
+                        person=None,
+                        state="planned",
+                    )
+                )
 
         session.commit()
         return household_to_dict(household)
@@ -454,8 +504,7 @@ def get_household_settings(household_id: str = Header(None, alias="X-Household-I
 
 @app.put("/api/household/settings")
 def update_household_settings(
-    payload: dict,
-    household_id: str = Header(None, alias="X-Household-ID")
+    payload: dict, household_id: str = Header(None, alias="X-Household-ID")
 ):
     """Update household settings."""
     hh_id = get_household_id(household_id)
@@ -507,7 +556,7 @@ def get_plan(household_id: str = Header(None, alias="X-Household-ID")):
 async def update_slot(
     slot_id: int,
     payload: dict,
-    household_id: str = Header(None, alias="X-Household-ID")
+    household_id: str = Header(None, alias="X-Household-ID"),
 ):
     """Update a meal slot."""
     hh_id = get_household_id(household_id)
@@ -525,7 +574,9 @@ async def update_slot(
         session.commit()
         session.refresh(slot)
         data = slot_to_dict(slot)
-        await manager.broadcast({"type": "slot.updated", "data": data, "household_id": hh_id})
+        await manager.broadcast(
+            {"type": "slot.updated", "data": data, "household_id": hh_id}
+        )
         return data
 
 
@@ -551,6 +602,7 @@ async def reset_plan(household_id: str = Header(None, alias="X-Household-ID")):
 
 # ---------- Grocery List Endpoints ----------
 
+
 @app.get("/api/groceries")
 def get_groceries(household_id: str = Header(None, alias="X-Household-ID")):
     """Return all grocery items for a household, ordered by category then name."""
@@ -566,7 +618,9 @@ def get_groceries(household_id: str = Header(None, alias="X-Household-ID")):
 
 
 @app.post("/api/groceries")
-def add_grocery(payload: dict, household_id: str = Header(None, alias="X-Household-ID")):
+def add_grocery(
+    payload: dict, household_id: str = Header(None, alias="X-Household-ID")
+):
     """Manually add a grocery item."""
     hh_id = get_household_id(household_id)
     name = payload.get("name", "").strip()
@@ -594,7 +648,7 @@ def add_grocery(payload: dict, household_id: str = Header(None, alias="X-Househo
 def toggle_grocery(
     item_id: int,
     payload: dict,
-    household_id: str = Header(None, alias="X-Household-ID")
+    household_id: str = Header(None, alias="X-Household-ID"),
 ):
     """Toggle bought status of a grocery item."""
     hh_id = get_household_id(household_id)
@@ -622,7 +676,7 @@ def clear_bought_groceries(household_id: str = Header(None, alias="X-Household-I
         bought_items = session.exec(
             select(GroceryItem)
             .where(GroceryItem.household_id == hh_id)
-            .where(GroceryItem.bought == True)
+            .where(GroceryItem.bought)
         ).all()
         for item in bought_items:
             session.delete(item)
@@ -644,7 +698,11 @@ def sync_groceries_from_plan(household_id: str = Header(None, alias="X-Household
         settings = session.exec(
             select(HouseholdSettings).where(HouseholdSettings.household_id == hh_id)
         ).first()
-        dietary_tags = settings.dietary_tags.split(",") if settings and settings.dietary_tags else []
+        dietary_tags = (
+            settings.dietary_tags.split(",")
+            if settings and settings.dietary_tags
+            else []
+        )
 
         # Get all meal slots for this household
         slots = session.exec(
@@ -697,8 +755,24 @@ def should_include_ingredient(ingredient: str, dietary_tags: List[str]) -> bool:
 
     # Vegetarian restrictions
     if "vegetarian" in dietary_tags:
-        meat_keywords = ["chicken", "beef", "pork", "fish", "shrimp", "salmon", "tuna", "turkey",
-                        "pollo", "carne", "cerdo", "pescado", "camarón", "salmón", "atún", "pavo"]
+        meat_keywords = [
+            "chicken",
+            "beef",
+            "pork",
+            "fish",
+            "shrimp",
+            "salmon",
+            "tuna",
+            "turkey",
+            "pollo",
+            "carne",
+            "cerdo",
+            "pescado",
+            "camarón",
+            "salmón",
+            "atún",
+            "pavo",
+        ]
         if any(keyword in ing_lower for keyword in meat_keywords):
             return False
 
@@ -710,8 +784,17 @@ def should_include_ingredient(ingredient: str, dietary_tags: List[str]) -> bool:
 
     # Dairy-free restrictions
     if "dairy-free" in dietary_tags:
-        dairy_keywords = ["milk", "cheese", "yogurt", "butter", "cream",
-                         "leche", "queso", "mantequilla", "crema"]
+        dairy_keywords = [
+            "milk",
+            "cheese",
+            "yogurt",
+            "butter",
+            "cream",
+            "leche",
+            "queso",
+            "mantequilla",
+            "crema",
+        ]
         if any(keyword in ing_lower for keyword in dairy_keywords):
             return False
 
