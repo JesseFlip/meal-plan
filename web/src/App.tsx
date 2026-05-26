@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { usePlanSync } from './hooks/usePlanSync'
 import { useTranslation } from './hooks/useTranslation'
+import { useMealHistory } from './hooks/useMealHistory'
 import { PlanGrid } from './components/PlanGrid'
 import { GroceryView } from './components/GroceryView'
 import { SyncStatus } from './components/SyncStatus'
@@ -23,6 +24,7 @@ type View = 'plan' | 'groceries'
 export default function App() {
   const [currentView, setCurrentView] = useState<View>('plan')
   const { t } = useTranslation()
+  const { meals } = useMealHistory()
 
   const {
     slots,
@@ -96,7 +98,7 @@ export default function App() {
       <main className="max-w-7xl mx-auto px-4 py-6">
         {currentView === 'plan' ? (
           <>
-            <PlanGrid slots={slots} onUpdate={updateSlot} pendingSlotIds={pendingSlotIds} />
+            <PlanGrid slots={slots} onUpdate={updateSlot} pendingSlotIds={pendingSlotIds} mealHistory={meals} />
             <footer className="mt-6 text-center text-xs text-stone-400">
               {t('footer.hint')}
             </footer>

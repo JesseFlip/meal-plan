@@ -1,5 +1,6 @@
 import { MealCell } from './MealCell'
 import type { Slot } from '../hooks/usePlanSync'
+import type { MealHistoryItem } from '../hooks/useMealHistory'
 import { useCompliance } from '../hooks/useCompliance'
 
 const DAYS = ['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN']
@@ -9,9 +10,10 @@ type Props = {
   slots: Slot[]
   onUpdate: (id: number, patch: Partial<Slot>) => void
   pendingSlotIds: Set<number>
+  mealHistory: MealHistoryItem[]
 }
 
-export function PlanGrid({ slots, onUpdate, pendingSlotIds }: Props) {
+export function PlanGrid({ slots, onUpdate, pendingSlotIds, mealHistory }: Props) {
   const { compliance, toggleDay } = useCompliance()
   const getSlot = (day: number, slot: number) =>
     slots.find(s => s.day === day && s.slot === slot)
@@ -62,6 +64,7 @@ export function PlanGrid({ slots, onUpdate, pendingSlotIds }: Props) {
                         slot={slot}
                         onUpdate={(patch) => onUpdate(slot.id, patch)}
                         isPending={pendingSlotIds.has(slot.id)}
+                        mealHistory={mealHistory}
                       />
                     )}
                   </td>

@@ -1,18 +1,18 @@
 import { useState, useEffect, useRef } from 'react'
 import type { Slot } from '../hooks/usePlanSync'
-import { useMealHistory } from '../hooks/useMealHistory'
+import type { MealHistoryItem } from '../hooks/useMealHistory'
 
 type Props = {
   slot: Slot
   onUpdate: (patch: Partial<Slot>) => void
   isPending: boolean
+  mealHistory: MealHistoryItem[]
 }
 
-export function MealCell({ slot, onUpdate, isPending }: Props) {
+export function MealCell({ slot, onUpdate, isPending, mealHistory }: Props) {
   const [editing, setEditing] = useState(false)
   const [text, setText] = useState(slot.text)
   const [showDropdown, setShowDropdown] = useState(false)
-  const { meals } = useMealHistory()
   const inputRef = useRef<HTMLInputElement>(null)
   const dropdownRef = useRef<HTMLDivElement>(null)
 
@@ -46,7 +46,7 @@ export function MealCell({ slot, onUpdate, isPending }: Props) {
   }
 
   // Filter meals based on current input
-  const filteredMeals = meals.filter(m =>
+  const filteredMeals = mealHistory.filter(m =>
     m.meal_name.toLowerCase().includes(text.toLowerCase())
   ).slice(0, 8)
 
