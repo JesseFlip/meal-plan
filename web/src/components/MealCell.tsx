@@ -152,7 +152,7 @@ export function MealCell({ slot, onUpdate, isPending, mealHistory }: Props) {
   const fasting = slot.state === 'fasting'
 
   // Nutritional guidelines based on meal slot
-  const getGuidelines = () => {
+  function getGuidelines() {
     if (slot.slot === 0 || slot.slot === 1) {
       // Breakfast & Lunch
       return 'Include: lean protein + green leafy veggies + low-starch carb'
