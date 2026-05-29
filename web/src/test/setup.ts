@@ -28,7 +28,7 @@ class WebSocketMock {
   onclose: ((event: CloseEvent) => void) | null = null
   onerror: ((event: Event) => void) | null = null
   onmessage: ((event: MessageEvent) => void) | null = null
-  readyState = WebSocket.CONNECTING
+  readyState: number = WebSocket.CONNECTING
 
   constructor(public url: string) {
     setTimeout(() => {
@@ -51,4 +51,4 @@ class WebSocketMock {
   }
 }
 
-global.WebSocket = WebSocketMock as any
+globalThis.WebSocket = WebSocketMock as any
