@@ -1,150 +1,243 @@
 import { useState, useEffect, useRef } from 'react'
 import type { Slot } from '../hooks/usePlanSync'
-import type { MealHistoryItem } from '../hooks/useMealHistory'
+import type { FoodOption } from '../hooks/useFoodOptions'
+import { useFoodOptionsContext } from '../contexts/FoodOptionsContext'
+import { useTranslation } from '../hooks/useTranslation'
 
 type Props = {
   slot: Slot
   onUpdate: (patch: Partial<Slot>) => void
   isPending: boolean
-  mealHistory: MealHistoryItem[]
 }
 
-export function MealCell({ slot, onUpdate, isPending, mealHistory }: Props) {
+// Separate component for food selection dropdown with "Add new" functionality
+function FoodSelect({
+  label,
+  value,
+  onChange,
+  options,
+  onAddNew,
+  placeholder,
+  t
+}: {
+  label: string
+  value: string
+  onChange: (value: string) => void
+  options: FoodOption[]
+  onAddNew: (name: string) => void
+  placeholder: string
+  t: (key: any) => string
+}) {
+  const [showAddNew, setShowAddNew] = useState(false)
+  const [newItemName, setNewItemName] = useState('')
+
+  if (showAddNew) {
+    return (
+      <div className="space-y-1">
+        <label className="text-[10px] text-stone-600 font-medium">{label} ({t('meal.addNew')})</label>
+        <div className="flex gap-1">
+          <input
+            type="text"
+            autoFocus
+            placeholder={`${t('meal.newItem')} ${label.toLowerCase()}...`}
+            className="flex-1 px-2 py-1.5 text-xs border border-amber-300 rounded"
+            value={newItemName}
+            onChange={(e) => setNewItemName(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && newItemName.trim()) {
+                e.preventDefault()
+                onAddNew(newItemName.trim())
+                onChange(newItemName.trim())
+                setShowAddNew(false)
+                setNewItemName('')
+              }
+              if (e.key === 'Escape') {
+                e.preventDefault()
+                setShowAddNew(false)
+                setNewItemName('')
+              }
+            }}
+          />
+          <button
+            type="button"
+            onClick={() => {
+              if (newItemName.trim()) {
+                onAddNew(newItemName.trim())
+                onChange(newItemName.trim())
+                setShowAddNew(false)
+                setNewItemName('')
+              }
+            }}
+            className="px-2 py-1 text-xs bg-amber-500 text-white rounded hover:bg-amber-600"
+          >
+            {t('meal.addButton')}
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              setShowAddNew(false)
+              setNewItemName('')
+            }}
+            className="px-2 py-1 text-xs bg-stone-300 text-stone-700 rounded hover:bg-stone-400"
+          >
+            {t('meal.cancel')}
+          </button>
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <div className="space-y-1">
+      <label className="text-[10px] text-stone-600 font-medium">{label}</label>
+      <select
+        value={value}
+        onChange={(e) => {
+          if (e.target.value === '__ADD_NEW__') {
+            setShowAddNew(true)
+          } else {
+            onChange(e.target.value)
+          }
+        }}
+        className="w-full px-2 py-1.5 text-xs border border-amber-300 rounded bg-white"
+      >
+        <option value="">{placeholder}</option>
+        {options.map((opt) => (
+          <option key={opt.id} value={opt.name}>
+            {opt.name}
+          </option>
+        ))}
+        <option value="__ADD_NEW__">+ {t('meal.addNew')} {label.toLowerCase()}</option>
+      </select>
+    </div>
+  )
+}
+
+export function MealCell({ slot, onUpdate, isPending }: Props) {
   const [editing, setEditing] = useState(false)
-  const [text, setText] = useState(slot.text)
-  const [showDropdown, setShowDropdown] = useState(false)
-  const inputRef = useRef<HTMLInputElement>(null)
-  const dropdownRef = useRef<HTMLDivElement>(null)
+  const [protein, setProtein] = useState(slot.protein || '')
+  const [veggie, setVeggie] = useState(slot.veggie || '')
+  const [carbOrFat, setCarbOrFat] = useState(slot.carb_or_fat || '')
+
+  const { t } = useTranslation()
+  const { proteins, veggies, carbs, fats, addProtein, addVeggie, addCarb, addFat } = useFoodOptionsContext()
+
+  const containerRef = useRef<HTMLDivElement>(null)
 
   // Keep local state in sync if server pushes an update while not editing
   useEffect(() => {
-    if (!editing) setText(slot.text)
-  }, [slot.text, editing])
+    if (!editing) {
+      setProtein(slot.protein || '')
+      setVeggie(slot.veggie || '')
+      setCarbOrFat(slot.carb_or_fat || '')
+    }
+  }, [slot.protein, slot.veggie, slot.carb_or_fat, editing])
 
   const save = () => {
     setEditing(false)
-    setShowDropdown(false)
-    const trimmed = text.trim()
-    if (trimmed === slot.text) return
-    const isFasting = /^fast(ing)?$/i.test(trimmed)
+    // Only update if something changed
+    if (protein === slot.protein && veggie === slot.veggie && carbOrFat === slot.carb_or_fat) {
+      return
+    }
     onUpdate({
-      text: trimmed,
-      state: isFasting ? 'fasting' : 'planned'
+      protein: protein.trim(),
+      veggie: veggie.trim(),
+      carb_or_fat: carbOrFat.trim(),
+      state: 'planned'
     })
   }
 
   const cancel = () => {
-    setText(slot.text)
+    setProtein(slot.protein || '')
+    setVeggie(slot.veggie || '')
+    setCarbOrFat(slot.carb_or_fat || '')
     setEditing(false)
-    setShowDropdown(false)
   }
 
-  const selectMeal = (mealName: string) => {
-    setText(mealName)
-    setShowDropdown(false)
-    setTimeout(save, 0)
-  }
-
-  // Filter meals based on current input
-  const filteredMeals = mealHistory.filter(m =>
-    m.meal_name.toLowerCase().includes(text.toLowerCase())
-  ).slice(0, 8)
-
-  // Close dropdown when clicking outside
+  // Close on click outside
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
       if (
-        dropdownRef.current &&
-        !dropdownRef.current.contains(e.target as Node) &&
-        inputRef.current &&
-        !inputRef.current.contains(e.target as Node)
+        containerRef.current &&
+        !containerRef.current.contains(e.target as Node)
       ) {
         save()
       }
     }
 
-    if (editing && showDropdown) {
+    if (editing) {
       document.addEventListener('mousedown', handleClickOutside)
       return () => document.removeEventListener('mousedown', handleClickOutside)
     }
-  }, [editing, showDropdown, text])
+  }, [editing, protein, veggie, carbOrFat])
+
+  const isDinner = slot.slot === 2
+  const thirdFieldLabel = isDinner ? t('meal.fat') : t('meal.carb')
+  const thirdFieldOptions = isDinner ? fats : carbs
+  const thirdFieldValue = carbOrFat
+  const setThirdFieldValue = setCarbOrFat
+  const addThirdFieldOption = isDinner ? addFat : addCarb
 
   if (editing) {
     const guidelines = getGuidelines()
     return (
-      <div className="relative">
-        <div className="space-y-2 p-3 bg-amber-50 border-2 border-amber-400">
+      <div ref={containerRef} className="relative">
+        <div className="space-y-3 p-3 bg-amber-50 border-2 border-amber-400">
           {guidelines && (
             <div className="text-[10px] text-amber-700 font-medium mb-1 px-1 py-0.5 bg-amber-100/50 rounded">
               {guidelines}
             </div>
           )}
-          <input
-            ref={inputRef}
-            type="text"
-            autoFocus
-            placeholder="Type or select a meal..."
-            className="w-full p-2 text-sm bg-white outline-none border border-amber-300 rounded"
-            value={text}
-            onChange={(e) => setText(e.target.value)}
-            onFocus={() => setShowDropdown(true)}
-            onBlur={(e) => {
-              // Delay to allow dropdown click to register
-              if (!dropdownRef.current?.contains(e.relatedTarget as Node)) {
-                save()
-              }
-            }}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter') {
-                e.preventDefault()
-                save()
-              }
-              if (e.key === 'Escape') {
-                e.preventDefault()
-                cancel()
-              }
-              if (e.key === 'ArrowDown' && filteredMeals.length > 0) {
-                e.preventDefault()
-                setShowDropdown(true)
-                const firstButton = dropdownRef.current?.querySelector('button')
-                firstButton?.focus()
-              }
-            }}
-          />
-        </div>
-        {showDropdown && filteredMeals.length > 0 && (
-          <div
-            ref={dropdownRef}
-            className="absolute top-full left-0 right-0 bg-white border border-stone-200 shadow-lg max-h-48 overflow-y-auto z-50"
-          >
-            {filteredMeals.map((meal, idx) => (
-              <button
-                key={idx}
-                type="button"
-                className="w-full text-left px-4 py-2 hover:bg-amber-50 text-sm border-b border-stone-100 last:border-b-0"
-                onMouseDown={(e) => {
-                  e.preventDefault()
-                  selectMeal(meal.meal_name)
-                }}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') {
-                    e.preventDefault()
-                    selectMeal(meal.meal_name)
-                  }
-                  if (e.key === 'Escape') {
-                    e.preventDefault()
-                    inputRef.current?.focus()
-                  }
-                }}
-              >
-                {meal.meal_name}
-                {meal.use_count > 1 && (
-                  <span className="ml-2 text-xs text-stone-400">({meal.use_count}×)</span>
-                )}
-              </button>
-            ))}
+
+          <div className="space-y-2">
+            <FoodSelect
+              label={t('meal.protein')}
+              value={protein}
+              onChange={setProtein}
+              options={proteins}
+              onAddNew={addProtein}
+              placeholder={t('meal.selectProtein')}
+              t={t}
+            />
+
+            <FoodSelect
+              label={t('meal.veggie')}
+              value={veggie}
+              onChange={setVeggie}
+              options={veggies}
+              onAddNew={addVeggie}
+              placeholder={t('meal.selectVeggie')}
+              t={t}
+            />
+
+            <FoodSelect
+              label={thirdFieldLabel}
+              value={thirdFieldValue}
+              onChange={setThirdFieldValue}
+              options={thirdFieldOptions}
+              onAddNew={addThirdFieldOption}
+              placeholder={isDinner ? t('meal.selectFat') : t('meal.selectCarb')}
+              t={t}
+            />
           </div>
-        )}
+
+          <div className="flex gap-2 justify-end pt-2">
+            <button
+              type="button"
+              onClick={cancel}
+              className="px-3 py-1 text-xs bg-stone-200 hover:bg-stone-300 rounded"
+            >
+              {t('meal.cancel')}
+            </button>
+            <button
+              type="button"
+              onClick={save}
+              className="px-3 py-1 text-xs bg-amber-500 hover:bg-amber-600 text-white rounded"
+            >
+              {t('meal.save')}
+            </button>
+          </div>
+        </div>
       </div>
     )
   }
@@ -155,13 +248,15 @@ export function MealCell({ slot, onUpdate, isPending, mealHistory }: Props) {
   function getGuidelines() {
     if (slot.slot === 0 || slot.slot === 1) {
       // Breakfast & Lunch
-      return 'Include: lean protein + green leafy veggies + low-starch carb'
+      return t('meal.guidelineBreakfastLunch')
     } else if (slot.slot === 2) {
       // Dinner
-      return 'Include: lean protein + green leafy veggies + healthy fat'
+      return t('meal.guidelineDinner')
     }
     return ''
   }
+
+  const hasContent = slot.protein || slot.veggie || slot.carb_or_fat || slot.text
 
   return (
     <div className="relative">
@@ -171,12 +266,34 @@ export function MealCell({ slot, onUpdate, isPending, mealHistory }: Props) {
           fasting ? 'bg-stone-50' : ''
         }`}
       >
-        {slot.text ? (
-          <span className={fasting ? 'text-stone-400 italic text-sm' : 'handwritten'}>
-            {slot.text}
-          </span>
+        {hasContent ? (
+          <div className="space-y-1">
+            {slot.protein && (
+              <div className="text-xs">
+                <span className="text-stone-500 font-medium">{t('meal.protein')}:</span>{' '}
+                <span className="handwritten">{slot.protein}</span>
+              </div>
+            )}
+            {slot.veggie && (
+              <div className="text-xs">
+                <span className="text-stone-500 font-medium">{t('meal.veggie')}:</span>{' '}
+                <span className="handwritten">{slot.veggie}</span>
+              </div>
+            )}
+            {slot.carb_or_fat && (
+              <div className="text-xs">
+                <span className="text-stone-500 font-medium">{isDinner ? t('meal.fat') : t('meal.carb')}:</span>{' '}
+                <span className="handwritten">{slot.carb_or_fat}</span>
+              </div>
+            )}
+            {slot.text && !slot.protein && !slot.veggie && !slot.carb_or_fat && (
+              <span className={fasting ? 'text-stone-400 italic text-sm' : 'handwritten'}>
+                {slot.text}
+              </span>
+            )}
+          </div>
         ) : (
-          <span className="text-stone-300 text-xs">+ add</span>
+          <span className="text-stone-300 text-xs">{t('meal.addCell')}</span>
         )}
       </button>
       {isPending && (

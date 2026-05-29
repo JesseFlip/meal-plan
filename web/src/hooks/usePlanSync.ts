@@ -5,6 +5,9 @@ export type Slot = {
   day: number
   slot: number
   text: string
+  protein: string
+  veggie: string
+  carb_or_fat: string
   person: string | null
   state: 'planned' | 'fasting' | 'skipped' | 'eaten'
   updated_at: string

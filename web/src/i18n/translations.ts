@@ -50,6 +50,45 @@ const translations = {
 
     // Footer
     'footer.hint': 'tap any cell to edit · changes sync live across devices',
+
+    // Meal editor
+    'meal.protein': 'Protein',
+    'meal.veggie': 'Veggie',
+    'meal.carb': 'Carb',
+    'meal.fat': 'Fat',
+    'meal.selectProtein': 'Select protein...',
+    'meal.selectVeggie': 'Select veggie...',
+    'meal.selectCarb': 'Select carb...',
+    'meal.selectFat': 'Select fat...',
+    'meal.addNew': 'Add new',
+    'meal.addButton': 'Add',
+    'meal.cancel': 'Cancel',
+    'meal.save': 'Save',
+    'meal.addCell': '+ add',
+    'meal.guidelineBreakfastLunch': 'Include: lean protein + green leafy veggies + low-starch carb',
+    'meal.guidelineDinner': 'Include: lean protein + green leafy veggies + healthy fat',
+    'meal.newItem': 'New',
+
+    // Settings
+    'settings.colorPicker': 'Text color picker',
+    'settings.textColor': 'Text Color',
+    'settings.presets': 'Presets',
+    'settings.nightMode': 'Night mode',
+    'settings.nightModeOn': 'Switch to night mode',
+    'settings.nightModeOff': 'Switch to day mode',
+
+    // Meal Generator
+    'mealGenerator.title': 'AI Meal Generator',
+    'mealGenerator.subtitle': 'Generate healthy meal suggestions based on your available ingredients',
+    'mealGenerator.numMeals': 'Number of Meals',
+    'mealGenerator.dietaryPreferences': 'Dietary Preferences (Optional)',
+    'mealGenerator.dietaryPlaceholder': 'e.g., vegetarian, gluten-free, low-carb...',
+    'mealGenerator.generate': 'Generate Meals',
+    'mealGenerator.generating': 'Generating...',
+    'mealGenerator.generatedMeals': 'Generated Meals',
+    'mealGenerator.generateNew': 'Generate New',
+    'mealGenerator.apply': 'Apply',
+    'mealGenerator.openGenerator': 'Generate Meals with AI',
   },
 
   es: {
@@ -96,6 +135,45 @@ const translations = {
 
     // Footer
     'footer.hint': 'toca cualquier celda para editar · los cambios se sincronizan en vivo',
+
+    // Meal editor
+    'meal.protein': 'Proteína',
+    'meal.veggie': 'Verdura',
+    'meal.carb': 'Carbohidrato',
+    'meal.fat': 'Grasa',
+    'meal.selectProtein': 'Seleccionar proteína...',
+    'meal.selectVeggie': 'Seleccionar verdura...',
+    'meal.selectCarb': 'Seleccionar carbohidrato...',
+    'meal.selectFat': 'Seleccionar grasa...',
+    'meal.addNew': 'Agregar nuevo',
+    'meal.addButton': 'Agregar',
+    'meal.cancel': 'Cancelar',
+    'meal.save': 'Guardar',
+    'meal.addCell': '+ agregar',
+    'meal.guidelineBreakfastLunch': 'Incluir: proteína magra + verduras de hoja verde + carbohidrato bajo en almidón',
+    'meal.guidelineDinner': 'Incluir: proteína magra + verduras de hoja verde + grasa saludable',
+    'meal.newItem': 'Nuevo',
+
+    // Settings
+    'settings.colorPicker': 'Selector de color de texto',
+    'settings.textColor': 'Color de Texto',
+    'settings.presets': 'Predefinidos',
+    'settings.nightMode': 'Modo nocturno',
+    'settings.nightModeOn': 'Cambiar a modo nocturno',
+    'settings.nightModeOff': 'Cambiar a modo día',
+
+    // Meal Generator
+    'mealGenerator.title': 'Generador de Comidas IA',
+    'mealGenerator.subtitle': 'Genere sugerencias de comidas saludables basadas en sus ingredientes disponibles',
+    'mealGenerator.numMeals': 'Número de Comidas',
+    'mealGenerator.dietaryPreferences': 'Preferencias Dietéticas (Opcional)',
+    'mealGenerator.dietaryPlaceholder': 'ej., vegetariano, sin gluten, bajo en carbohidratos...',
+    'mealGenerator.generate': 'Generar Comidas',
+    'mealGenerator.generating': 'Generando...',
+    'mealGenerator.generatedMeals': 'Comidas Generadas',
+    'mealGenerator.generateNew': 'Generar Nuevas',
+    'mealGenerator.apply': 'Aplicar',
+    'mealGenerator.openGenerator': 'Generar Comidas con IA',
   },
 }
 

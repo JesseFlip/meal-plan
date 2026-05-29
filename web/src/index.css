@@ -18,5 +18,12 @@ body {
   font-weight: 600;
   font-size: 1.25rem;
   line-height: 1.2;
-  color: #b91c1c; /* red marker */
+  color: var(--handwriting-color, #000000); /* Uses user-selected color, defaults to black */
+}
+
+/* Fallback if Caveat font doesn't load */
+@supports not (font-family: 'Caveat') {
+  .handwritten {
+    font-family: 'Comic Sans MS', 'Marker Felt', cursive;
+  }
 }

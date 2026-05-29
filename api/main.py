@@ -14,6 +14,7 @@ Run:
 
 import os
 import uuid
+import json
 from contextlib import asynccontextmanager
 from datetime import datetime
 from typing import Optional, List
@@ -28,7 +29,12 @@ from fastapi import (
 )
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+import google.generativeai as genai
 from sqlmodel import Field, Session, SQLModel, create_engine, select
+from dotenv import load_dotenv
+
+# Load environment variables from .env file
+load_dotenv()
 
 
 # ---------- Models ----------
@@ -49,6 +55,8 @@ class HouseholdSettings(SQLModel, table=True):
     plan_duration_days: int = 7  # 7, 10, or 14
     dietary_tags: str = ""  # Comma-separated: "vegetarian,gluten-free"
     language: str = "en"  # "en" or "es"
+    handwriting_color: str = "#000000"  # Hex color for handwritten text
+    night_mode: bool = False  # Dark mode toggle
 
 
 class MealSlot(SQLModel, table=True):
@@ -56,7 +64,10 @@ class MealSlot(SQLModel, table=True):
     household_id: str = Field(foreign_key="household.id", index=True)
     day: int  # 0=Mon ... 6=Sun
     slot: int  # 0=Breakfast, 1=Lunch, 2=Dinner
-    text: str = ""
+    text: str = ""  # Legacy field, kept for backwards compatibility
+    protein: str = ""  # Selected protein
+    veggie: str = ""  # Selected green leafy veggie
+    carb_or_fat: str = ""  # Carb for breakfast/lunch, fat for dinner
     person: Optional[str] = None  # None=both, "jesse", "dorys"
     state: str = "planned"  # planned | fasting | skipped | eaten
     updated_at: datetime = Field(default_factory=datetime.utcnow)
@@ -91,6 +102,34 @@ class DayCompliance(SQLModel, table=True):
     updated_at: datetime = Field(default_factory=datetime.utcnow)
 
 
+class ProteinOption(SQLModel, table=True):
+    id: Optional[int] = Field(default=None, primary_key=True)
+    household_id: str = Field(foreign_key="household.id", index=True)
+    name: str = Field(index=True)
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+
+
+class VeggieOption(SQLModel, table=True):
+    id: Optional[int] = Field(default=None, primary_key=True)
+    household_id: str = Field(foreign_key="household.id", index=True)
+    name: str = Field(index=True)
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+
+
+class CarbOption(SQLModel, table=True):
+    id: Optional[int] = Field(default=None, primary_key=True)
+    household_id: str = Field(foreign_key="household.id", index=True)
+    name: str = Field(index=True)
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+
+
+class FatOption(SQLModel, table=True):
+    id: Optional[int] = Field(default=None, primary_key=True)
+    household_id: str = Field(foreign_key="household.id", index=True)
+    name: str = Field(index=True)
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+
+
 def slot_to_dict(s: MealSlot) -> dict:
     return {
         "id": s.id,
@@ -98,6 +137,9 @@ def slot_to_dict(s: MealSlot) -> dict:
         "day": s.day,
         "slot": s.slot,
         "text": s.text,
+        "protein": s.protein,
+        "veggie": s.veggie,
+        "carb_or_fat": s.carb_or_fat,
         "person": s.person,
         "state": s.state,
         "updated_at": s.updated_at.isoformat(),
@@ -135,6 +177,8 @@ def settings_to_dict(s: HouseholdSettings) -> dict:
         "plan_duration_days": s.plan_duration_days,
         "dietary_tags": s.dietary_tags.split(",") if s.dietary_tags else [],
         "language": s.language,
+        "handwriting_color": s.handwriting_color,
+        "night_mode": s.night_mode,
     }
 
 
@@ -549,6 +593,10 @@ def update_household_settings(
             settings.dietary_tags = ",".join(payload["dietary_tags"])
         if "language" in payload:
             settings.language = payload["language"]
+        if "handwriting_color" in payload:
+            settings.handwriting_color = payload["handwriting_color"]
+        if "night_mode" in payload:
+            settings.night_mode = payload["night_mode"]
 
         session.add(settings)
         session.commit()
@@ -585,7 +633,7 @@ async def update_slot(
         if not slot or slot.household_id != hh_id:
             raise HTTPException(404, "Slot not found")
 
-        for key in ("text", "person", "state"):
+        for key in ("text", "person", "state", "protein", "veggie", "carb_or_fat"):
             if key in payload:
                 setattr(slot, key, payload[key])
         slot.updated_at = datetime.utcnow()
@@ -917,6 +965,339 @@ def should_include_ingredient(ingredient: str, dietary_tags: List[str]) -> bool:
             return False
 
     return True
+
+
+# ---------- Food Option Endpoints ----------
+
+
+@app.get("/api/proteins")
+def get_proteins(household_id: str = Header(None, alias="X-Household-ID")):
+    """Get all protein options for a household."""
+    hh_id = get_household_id(household_id)
+
+    with Session(engine) as session:
+        proteins = session.exec(
+            select(ProteinOption)
+            .where(ProteinOption.household_id == hh_id)
+            .order_by(ProteinOption.name)
+        ).all()
+        return [{"id": p.id, "name": p.name} for p in proteins]
+
+
+@app.post("/api/proteins")
+def add_protein(
+    payload: dict, household_id: str = Header(None, alias="X-Household-ID")
+):
+    """Add a new protein option."""
+    hh_id = get_household_id(household_id)
+    name = payload.get("name", "").strip()
+    if not name:
+        raise HTTPException(400, "Protein name required")
+
+    with Session(engine) as session:
+        # Check if already exists
+        existing = session.exec(
+            select(ProteinOption).where(
+                ProteinOption.household_id == hh_id,
+                ProteinOption.name == name
+            )
+        ).first()
+        if existing:
+            raise HTTPException(400, "Protein already exists")
+
+        protein = ProteinOption(household_id=hh_id, name=name)
+        session.add(protein)
+        session.commit()
+        session.refresh(protein)
+        return {"id": protein.id, "name": protein.name}
+
+
+@app.delete("/api/proteins/{protein_id}")
+def delete_protein(
+    protein_id: int, household_id: str = Header(None, alias="X-Household-ID")
+):
+    """Delete a protein option."""
+    hh_id = get_household_id(household_id)
+
+    with Session(engine) as session:
+        protein = session.get(ProteinOption, protein_id)
+        if not protein or protein.household_id != hh_id:
+            raise HTTPException(404, "Protein not found")
+
+        session.delete(protein)
+        session.commit()
+        return {"ok": True}
+
+
+@app.get("/api/veggies")
+def get_veggies(household_id: str = Header(None, alias="X-Household-ID")):
+    """Get all veggie options for a household."""
+    hh_id = get_household_id(household_id)
+
+    with Session(engine) as session:
+        veggies = session.exec(
+            select(VeggieOption)
+            .where(VeggieOption.household_id == hh_id)
+            .order_by(VeggieOption.name)
+        ).all()
+        return [{"id": v.id, "name": v.name} for v in veggies]
+
+
+@app.post("/api/veggies")
+def add_veggie(
+    payload: dict, household_id: str = Header(None, alias="X-Household-ID")
+):
+    """Add a new veggie option."""
+    hh_id = get_household_id(household_id)
+    name = payload.get("name", "").strip()
+    if not name:
+        raise HTTPException(400, "Veggie name required")
+
+    with Session(engine) as session:
+        # Check if already exists
+        existing = session.exec(
+            select(VeggieOption).where(
+                VeggieOption.household_id == hh_id,
+                VeggieOption.name == name
+            )
+        ).first()
+        if existing:
+            raise HTTPException(400, "Veggie already exists")
+
+        veggie = VeggieOption(household_id=hh_id, name=name)
+        session.add(veggie)
+        session.commit()
+        session.refresh(veggie)
+        return {"id": veggie.id, "name": veggie.name}
+
+
+@app.delete("/api/veggies/{veggie_id}")
+def delete_veggie(
+    veggie_id: int, household_id: str = Header(None, alias="X-Household-ID")
+):
+    """Delete a veggie option."""
+    hh_id = get_household_id(household_id)
+
+    with Session(engine) as session:
+        veggie = session.get(VeggieOption, veggie_id)
+        if not veggie or veggie.household_id != hh_id:
+            raise HTTPException(404, "Veggie not found")
+
+        session.delete(veggie)
+        session.commit()
+        return {"ok": True}
+
+
+@app.get("/api/carbs")
+def get_carbs(household_id: str = Header(None, alias="X-Household-ID")):
+    """Get all carb options for a household."""
+    hh_id = get_household_id(household_id)
+
+    with Session(engine) as session:
+        carbs = session.exec(
+            select(CarbOption)
+            .where(CarbOption.household_id == hh_id)
+            .order_by(CarbOption.name)
+        ).all()
+        return [{"id": c.id, "name": c.name} for c in carbs]
+
+
+@app.post("/api/carbs")
+def add_carb(
+    payload: dict, household_id: str = Header(None, alias="X-Household-ID")
+):
+    """Add a new carb option."""
+    hh_id = get_household_id(household_id)
+    name = payload.get("name", "").strip()
+    if not name:
+        raise HTTPException(400, "Carb name required")
+
+    with Session(engine) as session:
+        # Check if already exists
+        existing = session.exec(
+            select(CarbOption).where(
+                CarbOption.household_id == hh_id,
+                CarbOption.name == name
+            )
+        ).first()
+        if existing:
+            raise HTTPException(400, "Carb already exists")
+
+        carb = CarbOption(household_id=hh_id, name=name)
+        session.add(carb)
+        session.commit()
+        session.refresh(carb)
+        return {"id": carb.id, "name": carb.name}
+
+
+@app.delete("/api/carbs/{carb_id}")
+def delete_carb(
+    carb_id: int, household_id: str = Header(None, alias="X-Household-ID")
+):
+    """Delete a carb option."""
+    hh_id = get_household_id(household_id)
+
+    with Session(engine) as session:
+        carb = session.get(CarbOption, carb_id)
+        if not carb or carb.household_id != hh_id:
+            raise HTTPException(404, "Carb not found")
+
+        session.delete(carb)
+        session.commit()
+        return {"ok": True}
+
+
+@app.get("/api/fats")
+def get_fats(household_id: str = Header(None, alias="X-Household-ID")):
+    """Get all fat options for a household."""
+    hh_id = get_household_id(household_id)
+
+    with Session(engine) as session:
+        fats = session.exec(
+            select(FatOption)
+            .where(FatOption.household_id == hh_id)
+            .order_by(FatOption.name)
+        ).all()
+        return [{"id": f.id, "name": f.name} for f in fats]
+
+
+@app.post("/api/fats")
+def add_fat(
+    payload: dict, household_id: str = Header(None, alias="X-Household-ID")
+):
+    """Add a new fat option."""
+    hh_id = get_household_id(household_id)
+    name = payload.get("name", "").strip()
+    if not name:
+        raise HTTPException(400, "Fat name required")
+
+    with Session(engine) as session:
+        # Check if already exists
+        existing = session.exec(
+            select(FatOption).where(
+                FatOption.household_id == hh_id,
+                FatOption.name == name
+            )
+        ).first()
+        if existing:
+            raise HTTPException(400, "Fat already exists")
+
+        fat = FatOption(household_id=hh_id, name=name)
+        session.add(fat)
+        session.commit()
+        session.refresh(fat)
+        return {"id": fat.id, "name": fat.name}
+
+
+@app.delete("/api/fats/{fat_id}")
+def delete_fat(
+    fat_id: int, household_id: str = Header(None, alias="X-Household-ID")
+):
+    """Delete a fat option."""
+    hh_id = get_household_id(household_id)
+
+    with Session(engine) as session:
+        fat = session.get(FatOption, fat_id)
+        if not fat or fat.household_id != hh_id:
+            raise HTTPException(404, "Fat not found")
+
+        session.delete(fat)
+        session.commit()
+        return {"ok": True}
+
+
+@app.post("/api/meals/generate")
+def generate_meals(
+    payload: dict, household_id: str = Header(None, alias="X-Household-ID")
+):
+    """Generate AI-powered meal suggestions based on available food options."""
+    hh_id = get_household_id(household_id)
+
+    # Get parameters from payload
+    num_meals = payload.get("num_meals", 7)
+    dietary_preferences = payload.get("dietary_preferences", "")
+
+    with Session(engine) as session:
+        # Get all food options for the household
+        proteins = list(session.exec(
+            select(ProteinOption).where(ProteinOption.household_id == hh_id)
+        ))
+        veggies = list(session.exec(
+            select(VeggieOption).where(VeggieOption.household_id == hh_id)
+        ))
+        carbs = list(session.exec(
+            select(CarbOption).where(CarbOption.household_id == hh_id)
+        ))
+        fats = list(session.exec(
+            select(FatOption).where(FatOption.household_id == hh_id)
+        ))
+
+        # Format food options for the prompt
+        proteins_list = ", ".join([p.name for p in proteins]) if proteins else "chicken, fish, tofu"
+        veggies_list = ", ".join([v.name for v in veggies]) if veggies else "spinach, broccoli, kale"
+        carbs_list = ", ".join([c.name for c in carbs]) if carbs else "brown rice, quinoa, sweet potato"
+        fats_list = ", ".join([f.name for f in fats]) if fats else "avocado, olive oil, nuts"
+
+        # Get API key from environment
+        api_key = os.getenv("GEMINI_API_KEY")
+        if not api_key:
+            raise HTTPException(500, "GEMINI_API_KEY not configured")
+
+        # Build the prompt
+        prompt = f"""Generate {num_meals} healthy meal suggestions using the following available ingredients:
+
+Proteins: {proteins_list}
+Vegetables (green leafy preferred): {veggies_list}
+Carbs: {carbs_list}
+Fats: {fats_list}
+
+{f"Dietary preferences/restrictions: {dietary_preferences}" if dietary_preferences else ""}
+
+Please follow these guidelines:
+- For breakfast and lunch: Include lean protein + green leafy veggies + low-starch carb
+- For dinner: Include lean protein + green leafy veggies + healthy fat
+- Create variety across the meals
+- Keep it simple and practical
+- Each meal should be balanced and nutritious
+
+Return ONLY a valid JSON array with this exact structure:
+[
+  {{
+    "name": "Meal Name",
+    "meal_type": "breakfast|lunch|dinner",
+    "protein": "protein from the list",
+    "veggie": "veggie from the list",
+    "carb_or_fat": "carb or fat from the list",
+    "description": "Brief 1-2 sentence description"
+  }}
+]
+
+Make sure to use ONLY ingredients from the lists provided above."""
+
+        try:
+            # Call Gemini API
+            genai.configure(api_key=api_key)
+            model = genai.GenerativeModel('gemini-flash-latest')
+            response = model.generate_content(prompt)
+            response_text = response.text
+
+            # Parse JSON from response
+            # Try to find JSON array in the response
+            start_idx = response_text.find('[')
+            end_idx = response_text.rfind(']') + 1
+
+            if start_idx == -1 or end_idx == 0:
+                raise HTTPException(500, "Failed to parse meal suggestions from AI response")
+
+            json_str = response_text[start_idx:end_idx]
+            meals = json.loads(json_str)
+
+            return {"meals": meals}
+
+        except json.JSONDecodeError as e:
+            raise HTTPException(500, f"Failed to parse AI response: {str(e)}")
+        except Exception as e:
+            raise HTTPException(500, f"Error generating meals: {str(e)}")
 
 
 @app.websocket("/ws")
