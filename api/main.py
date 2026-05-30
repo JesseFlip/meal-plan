@@ -701,7 +701,10 @@ def get_compliance(household_id: str = Header(None, alias="X-Household-ID")):
 
         # Return compliance for all 7 days (0=Mon...6=Sun)
         compliance_map = {c.day: c.compliant for c in compliance_records}
-        return [{"day": day, "compliant": compliance_map.get(day, False)} for day in range(7)]
+        return [
+            {"day": day, "compliant": compliance_map.get(day, False)}
+            for day in range(7)
+        ]
 
 
 @app.post("/api/compliance/{day}")
@@ -1233,10 +1236,22 @@ def generate_meals(
         ))
 
         # Format food options for the prompt
-        proteins_list = ", ".join([p.name for p in proteins]) if proteins else "chicken, fish, tofu"
-        veggies_list = ", ".join([v.name for v in veggies]) if veggies else "spinach, broccoli, kale"
-        carbs_list = ", ".join([c.name for c in carbs]) if carbs else "brown rice, quinoa, sweet potato"
-        fats_list = ", ".join([f.name for f in fats]) if fats else "avocado, olive oil, nuts"
+        proteins_list = (
+            ", ".join([p.name for p in proteins]) if proteins else "chicken, fish, tofu"
+        )
+        veggies_list = (
+            ", ".join([v.name for v in veggies])
+            if veggies
+            else "spinach, broccoli, kale"
+        )
+        carbs_list = (
+            ", ".join([c.name for c in carbs])
+            if carbs
+            else "brown rice, quinoa, sweet potato"
+        )
+        fats_list = (
+            ", ".join([f.name for f in fats]) if fats else "avocado, olive oil, nuts"
+        )
 
         # Get API key from environment
         api_key = os.getenv("GEMINI_API_KEY")
@@ -1287,7 +1302,9 @@ Make sure to use ONLY ingredients from the lists provided above."""
             end_idx = response_text.rfind(']') + 1
 
             if start_idx == -1 or end_idx == 0:
-                raise HTTPException(500, "Failed to parse meal suggestions from AI response")
+                raise HTTPException(
+                    500, "Failed to parse meal suggestions from AI response"
+                )
 
             json_str = response_text[start_idx:end_idx]
             meals = json.loads(json_str)
