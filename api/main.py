@@ -1292,14 +1292,14 @@ Make sure to use ONLY ingredients from the lists provided above."""
         try:
             # Call Gemini API
             genai.configure(api_key=api_key)
-            model = genai.GenerativeModel('gemini-flash-latest')
+            model = genai.GenerativeModel("gemini-flash-latest")
             response = model.generate_content(prompt)
             response_text = response.text
 
             # Parse JSON from response
             # Try to find JSON array in the response
-            start_idx = response_text.find('[')
-            end_idx = response_text.rfind(']') + 1
+            start_idx = response_text.find("[")
+            end_idx = response_text.rfind("]") + 1
 
             if start_idx == -1 or end_idx == 0:
                 raise HTTPException(
