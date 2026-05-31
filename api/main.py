@@ -437,10 +437,9 @@ async def lifespan(app: FastAPI):
 app = FastAPI(title="FridgePlan API", lifespan=lifespan)
 
 # CORS configuration — can be tightened via ALLOWED_ORIGINS env var
-allowed_origins_str = os.getenv("ALLOWED_ORIGINS", "*")
-allowed_origins = (
-    allowed_origins_str.split(",") if allowed_origins_str != "*" else ["*"]
-)
+# Default includes production Netlify URL to ensure CORS works in production
+allowed_origins_str = os.getenv("ALLOWED_ORIGINS", "https://mealp.netlify.app,http://localhost:5173,http://localhost:5174")
+allowed_origins = allowed_origins_str.split(",")
 
 app.add_middleware(
     CORSMiddleware,
