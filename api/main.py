@@ -184,13 +184,17 @@ def settings_to_dict(s: HouseholdSettings) -> dict:
 
 # ---------- DB ----------
 
+db_url = os.getenv("DATABASE_URL", "sqlite:///fridgeplan.db")
+# Railway/Heroku-style URLs may use the deprecated postgres:// scheme,
+# which SQLAlchemy 2.x rejects.
+if db_url.startswith("postgres://"):
+    db_url = db_url.replace("postgres://", "postgresql://", 1)
+
 engine = create_engine(
-    os.getenv("DATABASE_URL", "sqlite:///fridgeplan.db"),
-    connect_args=(
-        {"check_same_thread": False}
-        if os.getenv("DATABASE_URL", "sqlite://").startswith("sqlite")
-        else {}
-    ),
+    db_url,
+    connect_args=({"check_same_thread": False} if db_url.startswith("sqlite") else {}),
+    # Recycle stale connections — managed Postgres drops idle ones.
+    pool_pre_ping=True,
 )
 
 
