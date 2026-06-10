@@ -1,0 +1,63 @@
+name: Diagnose deployment
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [claude/stoic-babbage-gzry68]
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Backend health
+        run: |
+          echo "=== GET /api/health ==="
+          curl -sS -m 20 -w "\nHTTP %{http_code}\n" https://web-production-6db11.up.railway.app/api/health || echo "CURL FAILED: $?"
+
+      - name: Backend household init
+        run: |
+          echo "=== POST /api/household/init ==="
+          curl -sS -m 20 -w "\nHTTP %{http_code}\n" -X POST \
+            -H "Content-Type: application/json" \
+            -H "Origin: https://mealp.netlify.app" \
+            -d '{"name":"diag"}' \
+            https://web-production-6db11.up.railway.app/api/household/init || echo "CURL FAILED: $?"
+
+      - name: Backend plan endpoint with CORS preflight
+        run: |
+          echo "=== OPTIONS /api/plan (CORS preflight) ==="
+          curl -sS -m 20 -i -X OPTIONS \
+            -H "Origin: https://mealp.netlify.app" \
+            -H "Access-Control-Request-Method: GET" \
+            -H "Access-Control-Request-Headers: x-household-id,content-type" \
+            https://web-production-6db11.up.railway.app/api/plan || echo "CURL FAILED: $?"
+          echo
+          echo "=== GET /api/plan ==="
+          HH=$(curl -sS -m 20 -X POST -H "Content-Type: application/json" -d '{"name":"diag"}' https://web-production-6db11.up.railway.app/api/household/init | python3 -c "import sys,json;print(json.load(sys.stdin).get('id',''))" || true)
+          echo "household id: $HH"
+          curl -sS -m 20 -w "\nHTTP %{http_code}\n" \
+            -H "Origin: https://mealp.netlify.app" \
+            -H "X-Household-ID: $HH" \
+            https://web-production-6db11.up.railway.app/api/plan | head -c 1500 || echo "CURL FAILED: $?"
+
+      - name: Frontend bundle inspection
+        run: |
+          echo "=== GET https://mealp.netlify.app/ ==="
+          curl -sS -m 20 -w "\nHTTP %{http_code}\n" https://mealp.netlify.app/ -o index.html || echo "CURL FAILED: $?"
+          cat index.html
+          echo
+          echo "=== JS bundles referenced ==="
+          grep -oE '/assets/[A-Za-z0-9_.-]+\.js' index.html | sort -u | tee bundles.txt || echo "no /assets/*.js found in index.html"
+          while read -r b; do
+            echo "=== Inspecting $b ==="
+            curl -sS -m 30 "https://mealp.netlify.app$b" -o bundle.js || continue
+            echo "-- occurrences of localhost:8000:"; grep -c 'localhost:8000' bundle.js || true
+            echo "-- occurrences of railway.app:"; grep -c 'railway.app' bundle.js || true
+            echo "-- railway URLs found:"; grep -oE 'https://[a-z0-9.-]*railway\.app[a-z0-9/.-]*' bundle.js | sort -u || true
+            echo "-- ws URLs found:"; grep -oE 'wss?://[a-zA-Z0-9:./-]+' bundle.js | sort -u || true
+          done < bundles.txt
+
+      - name: Service worker check
+        run: |
+          echo "=== GET /sw.js ==="
+          curl -sS -m 20 -w "\nHTTP %{http_code}\n" https://mealp.netlify.app/sw.js | head -c 800 || echo "CURL FAILED: $?"
