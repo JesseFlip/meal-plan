@@ -438,7 +438,10 @@ app = FastAPI(title="FridgePlan API", lifespan=lifespan)
 
 # CORS configuration — can be tightened via ALLOWED_ORIGINS env var
 # Default includes production Netlify URL to ensure CORS works in production
-allowed_origins_str = os.getenv("ALLOWED_ORIGINS", "https://mealp.netlify.app,http://localhost:5173,http://localhost:5174")
+allowed_origins_str = os.getenv(
+    "ALLOWED_ORIGINS",
+    "https://mealp.netlify.app,http://localhost:5173,http://localhost:5174",
+)
 allowed_origins = allowed_origins_str.split(",")
 
 app.add_middleware(
@@ -645,7 +648,7 @@ async def update_slot(
                 history = session.exec(
                     select(MealHistory).where(
                         MealHistory.household_id == hh_id,
-                        MealHistory.meal_name == meal_name
+                        MealHistory.meal_name == meal_name,
                     )
                 ).first()
 
@@ -657,7 +660,7 @@ async def update_slot(
                         household_id=hh_id,
                         meal_name=meal_name,
                         use_count=1,
-                        last_used=datetime.utcnow()
+                        last_used=datetime.utcnow(),
                     )
                 session.add(history)
 
@@ -708,9 +711,7 @@ def get_compliance(household_id: str = Header(None, alias="X-Household-ID")):
 
 @app.post("/api/compliance/{day}")
 def toggle_compliance(
-    day: int,
-    payload: dict,
-    household_id: str = Header(None, alias="X-Household-ID")
+    day: int, payload: dict, household_id: str = Header(None, alias="X-Household-ID")
 ):
     """Toggle compliance status for a specific day."""
     hh_id = get_household_id(household_id)
@@ -721,8 +722,7 @@ def toggle_compliance(
     with Session(engine) as session:
         compliance = session.exec(
             select(DayCompliance).where(
-                DayCompliance.household_id == hh_id,
-                DayCompliance.day == day
+                DayCompliance.household_id == hh_id, DayCompliance.day == day
             )
         ).first()
 
@@ -736,7 +736,7 @@ def toggle_compliance(
                 household_id=hh_id,
                 day=day,
                 compliant=compliant,
-                updated_at=datetime.utcnow()
+                updated_at=datetime.utcnow(),
             )
 
         session.add(compliance)
@@ -1000,8 +1000,7 @@ def add_protein(
         # Check if already exists
         existing = session.exec(
             select(ProteinOption).where(
-                ProteinOption.household_id == hh_id,
-                ProteinOption.name == name
+                ProteinOption.household_id == hh_id, ProteinOption.name == name
             )
         ).first()
         if existing:
@@ -1046,9 +1045,7 @@ def get_veggies(household_id: str = Header(None, alias="X-Household-ID")):
 
 
 @app.post("/api/veggies")
-def add_veggie(
-    payload: dict, household_id: str = Header(None, alias="X-Household-ID")
-):
+def add_veggie(payload: dict, household_id: str = Header(None, alias="X-Household-ID")):
     """Add a new veggie option."""
     hh_id = get_household_id(household_id)
     name = payload.get("name", "").strip()
@@ -1059,8 +1056,7 @@ def add_veggie(
         # Check if already exists
         existing = session.exec(
             select(VeggieOption).where(
-                VeggieOption.household_id == hh_id,
-                VeggieOption.name == name
+                VeggieOption.household_id == hh_id, VeggieOption.name == name
             )
         ).first()
         if existing:
@@ -1105,9 +1101,7 @@ def get_carbs(household_id: str = Header(None, alias="X-Household-ID")):
 
 
 @app.post("/api/carbs")
-def add_carb(
-    payload: dict, household_id: str = Header(None, alias="X-Household-ID")
-):
+def add_carb(payload: dict, household_id: str = Header(None, alias="X-Household-ID")):
     """Add a new carb option."""
     hh_id = get_household_id(household_id)
     name = payload.get("name", "").strip()
@@ -1118,8 +1112,7 @@ def add_carb(
         # Check if already exists
         existing = session.exec(
             select(CarbOption).where(
-                CarbOption.household_id == hh_id,
-                CarbOption.name == name
+                CarbOption.household_id == hh_id, CarbOption.name == name
             )
         ).first()
         if existing:
@@ -1133,9 +1126,7 @@ def add_carb(
 
 
 @app.delete("/api/carbs/{carb_id}")
-def delete_carb(
-    carb_id: int, household_id: str = Header(None, alias="X-Household-ID")
-):
+def delete_carb(carb_id: int, household_id: str = Header(None, alias="X-Household-ID")):
     """Delete a carb option."""
     hh_id = get_household_id(household_id)
 
@@ -1164,9 +1155,7 @@ def get_fats(household_id: str = Header(None, alias="X-Household-ID")):
 
 
 @app.post("/api/fats")
-def add_fat(
-    payload: dict, household_id: str = Header(None, alias="X-Household-ID")
-):
+def add_fat(payload: dict, household_id: str = Header(None, alias="X-Household-ID")):
     """Add a new fat option."""
     hh_id = get_household_id(household_id)
     name = payload.get("name", "").strip()
@@ -1177,8 +1166,7 @@ def add_fat(
         # Check if already exists
         existing = session.exec(
             select(FatOption).where(
-                FatOption.household_id == hh_id,
-                FatOption.name == name
+                FatOption.household_id == hh_id, FatOption.name == name
             )
         ).first()
         if existing:
@@ -1192,9 +1180,7 @@ def add_fat(
 
 
 @app.delete("/api/fats/{fat_id}")
-def delete_fat(
-    fat_id: int, household_id: str = Header(None, alias="X-Household-ID")
-):
+def delete_fat(fat_id: int, household_id: str = Header(None, alias="X-Household-ID")):
     """Delete a fat option."""
     hh_id = get_household_id(household_id)
 
@@ -1221,18 +1207,20 @@ def generate_meals(
 
     with Session(engine) as session:
         # Get all food options for the household
-        proteins = list(session.exec(
-            select(ProteinOption).where(ProteinOption.household_id == hh_id)
-        ))
-        veggies = list(session.exec(
-            select(VeggieOption).where(VeggieOption.household_id == hh_id)
-        ))
-        carbs = list(session.exec(
-            select(CarbOption).where(CarbOption.household_id == hh_id)
-        ))
-        fats = list(session.exec(
-            select(FatOption).where(FatOption.household_id == hh_id)
-        ))
+        proteins = list(
+            session.exec(
+                select(ProteinOption).where(ProteinOption.household_id == hh_id)
+            )
+        )
+        veggies = list(
+            session.exec(select(VeggieOption).where(VeggieOption.household_id == hh_id))
+        )
+        carbs = list(
+            session.exec(select(CarbOption).where(CarbOption.household_id == hh_id))
+        )
+        fats = list(
+            session.exec(select(FatOption).where(FatOption.household_id == hh_id))
+        )
 
         # Format food options for the prompt
         proteins_list = (
@@ -1325,3 +1313,14 @@ async def websocket_endpoint(ws: WebSocket):
             await ws.receive_text()
     except WebSocketDisconnect:
         manager.disconnect(ws)
+
+
+if __name__ == "__main__":
+    # Nixpacks' Python provider starts the app with `python main.py` when no
+    # explicit start command applies (e.g. Railway root directory set to api/,
+    # where the repo-root railway.json and Procfile are not picked up). Without
+    # this block that command imports the module and exits 0 — the deploy looks
+    # green while nothing is listening.
+    import uvicorn
+
+    uvicorn.run(app, host="0.0.0.0", port=int(os.getenv("PORT", "8000")))
