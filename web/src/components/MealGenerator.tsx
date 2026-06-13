@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { useTranslation } from '../hooks/useTranslation'
 import type { Slot } from '../hooks/usePlanSync'
 
-const API = import.meta.env.VITE_API_URL || 'http://localhost:8000'
+const API = import.meta.env.VITE_API_URL || ''
 
 const DAYS = ['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN']
 const SLOTS = ['Breakfast', 'Lunch', 'Dinner']

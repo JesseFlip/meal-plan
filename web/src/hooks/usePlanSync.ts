@@ -13,8 +13,8 @@ export type Slot = {
   updated_at: string
 }
 
-const API = import.meta.env.VITE_API_URL || 'http://localhost:8000'
-const WS_URL = import.meta.env.VITE_WS_URL || 'ws://localhost:8000/ws'
+const API = import.meta.env.VITE_API_URL || ''
+const WS_URL = import.meta.env.VITE_WS_URL || '/ws'
 
 // Household ID management
 const getHouseholdId = (): string | null => {
