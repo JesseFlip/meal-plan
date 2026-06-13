@@ -6,6 +6,20 @@
 [build.environment]
   NODE_VERSION = "20"
 
+# Proxy API requests to EC2 backend (avoids mixed content HTTPS/HTTP issue)
+[[redirects]]
+  from = "/api/*"
+  to = "http://50.19.129.245:8002/api/:splat"
+  status = 200
+  force = true
+
+# Proxy WebSocket connections to EC2 backend
+[[redirects]]
+  from = "/ws"
+  to = "http://50.19.129.245:8002/ws"
+  status = 200
+  force = true
+
 # SPA fallback — let React Router (if added later) handle routes
 [[redirects]]
   from = "/*"
