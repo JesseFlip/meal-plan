@@ -510,7 +510,7 @@ def health():
         "ok": True,
         "ts": datetime.utcnow().isoformat(),
         "version": "1.0.0",
-        "deployment": "automated"
+        "deployment": "automated",
     }
 
 
