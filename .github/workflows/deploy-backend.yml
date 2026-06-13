@@ -1,0 +1,49 @@
+name: Deploy Backend to EC2
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'api/**'
+      - '.github/workflows/deploy-backend.yml'
+
+jobs:
+  deploy:
+    name: Deploy to EC2
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Deploy to EC2
+        env:
+          SSH_KEY: ${{ secrets.EC2_SSH_KEY }}
+          EC2_HOST: 50.19.129.245
+          EC2_USER: ubuntu
+        run: |
+          # Save SSH key to file
+          echo "$SSH_KEY" > key.pem
+          chmod 600 key.pem
+
+          # Add EC2 host to known_hosts to avoid prompt
+          ssh-keyscan -H $EC2_HOST >> ~/.ssh/known_hosts
+
+          # Run deployment script on EC2
+          ssh -i key.pem -o StrictHostKeyChecking=no $EC2_USER@$EC2_HOST '/home/ubuntu/deploy.sh'
+
+          # Clean up
+          rm -f key.pem
+
+      - name: Notify success
+        if: success()
+        run: |
+          echo "🎉 Backend deployment successful!"
+          echo "✅ Changes are live at http://50.19.129.245:8002"
+
+      - name: Notify failure
+        if: failure()
+        run: |
+          echo "❌ Deployment failed!"
+          echo "Check the logs above for details."
