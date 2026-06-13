@@ -506,7 +506,12 @@ def get_household_id(x_household_id: Optional[str] = Header(None)) -> str:
 
 @app.get("/api/health")
 def health():
-    return {"ok": True, "ts": datetime.utcnow().isoformat()}
+    return {
+        "ok": True,
+        "ts": datetime.utcnow().isoformat(),
+        "version": "1.0.0",
+        "deployment": "automated"
+    }
 
 
 # ---------- Household Management Endpoints ----------
