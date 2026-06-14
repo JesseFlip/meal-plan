@@ -64,7 +64,13 @@ export function PlanGrid({ slots, onUpdate, pendingSlotIds }: Props) {
           />
         </Suspense>
       )}
-      <div className="bg-white dark:bg-stone-800 rounded-xl shadow-sm border border-stone-200 dark:border-stone-700 overflow-x-auto">
+      <div className="bg-white dark:bg-stone-800 rounded-xl shadow-sm border border-stone-200 dark:border-stone-700 overflow-x-auto scrollbar-thin">
+        {/* Mobile scroll hint */}
+        <div className="sm:hidden px-3 py-2 bg-amber-50 dark:bg-amber-900/20 border-b border-amber-200 dark:border-amber-800 text-center">
+          <p className="text-xs text-amber-700 dark:text-amber-400">
+            👉 Swipe to see all days
+          </p>
+        </div>
         <table className="min-w-full border-collapse">
           <thead>
             <tr>

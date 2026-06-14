@@ -340,7 +340,7 @@ export function MealCell({ slot, onUpdate, isPending, onCopyToTomorrow }: Props)
     <div className="relative group">
       <button
         onClick={() => setEditing(true)}
-        className={`w-full min-h-[88px] sm:min-h-[100px] p-3 text-left hover:bg-amber-50 active:bg-amber-100 transition-colors ${
+        className={`w-full min-h-[100px] sm:min-h-[100px] p-3 sm:p-3 text-left hover:bg-amber-50 active:bg-amber-100 transition-colors touch-manipulation ${
           fasting ? 'bg-stone-50' : ''
         }`}
       >
@@ -377,15 +377,15 @@ export function MealCell({ slot, onUpdate, isPending, onCopyToTomorrow }: Props)
           <span className="text-stone-300 dark:text-stone-600 text-xs">{t('meal.addCell')}</span>
         )}
       </button>
-      {/* Rating buttons */}
+      {/* Rating buttons - Better touch targets on mobile */}
       {hasContent && !fasting && (
-        <div className="absolute bottom-1.5 right-1.5 flex gap-1">
+        <div className="absolute bottom-1 right-1 flex gap-1">
           <button
             onClick={(e) => {
               e.stopPropagation()
               onUpdate({ rating: slot.rating === 'good' ? '' : 'good' })
             }}
-            className={`w-6 h-6 flex items-center justify-center rounded transition-all ${
+            className={`w-7 h-7 sm:w-6 sm:h-6 flex items-center justify-center rounded transition-all touch-manipulation ${
               slot.rating === 'good'
                 ? 'bg-green-100 border-2 border-green-500 scale-110'
                 : 'bg-white/80 border border-stone-200 opacity-0 group-hover:opacity-100 hover:bg-green-50 hover:border-green-300'
@@ -393,14 +393,14 @@ export function MealCell({ slot, onUpdate, isPending, onCopyToTomorrow }: Props)
             title="Mark as good"
             aria-label="Mark as good"
           >
-            <span className="text-sm">😊</span>
+            <span className="text-base sm:text-sm">😊</span>
           </button>
           <button
             onClick={(e) => {
               e.stopPropagation()
               onUpdate({ rating: slot.rating === 'bad' ? '' : 'bad' })
             }}
-            className={`w-6 h-6 flex items-center justify-center rounded transition-all ${
+            className={`w-7 h-7 sm:w-6 sm:h-6 flex items-center justify-center rounded transition-all touch-manipulation ${
               slot.rating === 'bad'
                 ? 'bg-red-100 border-2 border-red-500 scale-110'
                 : 'bg-white/80 border border-stone-200 opacity-0 group-hover:opacity-100 hover:bg-red-50 hover:border-red-300'
@@ -408,22 +408,22 @@ export function MealCell({ slot, onUpdate, isPending, onCopyToTomorrow }: Props)
             title="Mark as bad"
             aria-label="Mark as bad"
           >
-            <span className="text-sm">☹️</span>
+            <span className="text-base sm:text-sm">☹️</span>
           </button>
         </div>
       )}
-      {/* Copy to tomorrow button */}
+      {/* Copy to tomorrow button - Better touch target on mobile */}
       {hasContent && !fasting && onCopyToTomorrow && slot.day < 6 && (
         <button
           onClick={(e) => {
             e.stopPropagation()
             onCopyToTomorrow()
           }}
-          className="absolute top-1.5 right-1.5 w-6 h-6 flex items-center justify-center rounded bg-white/80 hover:bg-amber-100 border border-stone-200 hover:border-amber-400 opacity-0 group-hover:opacity-100 transition-opacity shadow-sm"
+          className="absolute top-1 right-1 w-7 h-7 sm:w-6 sm:h-6 flex items-center justify-center rounded bg-white/80 hover:bg-amber-100 border border-stone-200 hover:border-amber-400 opacity-0 group-hover:opacity-100 transition-opacity shadow-sm touch-manipulation"
           title="Copy to tomorrow"
           aria-label="Copy to tomorrow"
         >
-          <svg className="w-3.5 h-3.5 text-stone-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg className="w-4 h-4 sm:w-3.5 sm:h-3.5 text-stone-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
           </svg>
         </button>

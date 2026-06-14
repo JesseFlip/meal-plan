@@ -118,6 +118,11 @@ const translations = {
     'pwa.installMessage': 'Add to your home screen for quick access and offline use',
     'pwa.install': 'Install',
     'pwa.later': 'Later',
+
+    // Share
+    'share.button': 'Share',
+    'share.tooltip': 'Share this week\'s meal plan',
+    'share.copied': 'Copied to clipboard!',
   },
 
   es: {
@@ -232,6 +237,11 @@ const translations = {
     'pwa.installMessage': 'Agrega a tu pantalla de inicio para acceso rápido y uso sin conexión',
     'pwa.install': 'Instalar',
     'pwa.later': 'Más tarde',
+
+    // Share
+    'share.button': 'Compartir',
+    'share.tooltip': 'Compartir el plan de comidas de esta semana',
+    'share.copied': '¡Copiado al portapapeles!',
   },
 }
 

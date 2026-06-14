@@ -4,6 +4,7 @@ import { useTranslation } from './hooks/useTranslation'
 import { useSettings } from './hooks/useSettings'
 import { PlanGrid } from './components/PlanGrid'
 import { WeekPicker } from './components/WeekPicker'
+import { ShareButton } from './components/ShareButton'
 import { InstallPrompt } from './components/InstallPrompt'
 import { LanguageSwitcher } from './components/LanguageSwitcher'
 import { ColorPicker } from './components/ColorPicker'
@@ -66,24 +67,39 @@ function AppContent() {
     <div className="min-h-screen bg-stone-50 dark:bg-stone-900 transition-colors">
         <InstallPrompt />
         <header className="sticky top-0 z-10 bg-stone-50/95 dark:bg-stone-900/95 backdrop-blur border-b border-stone-200 dark:border-stone-700">
-          <div className="max-w-7xl mx-auto px-4 py-3">
-            <div className="flex items-center justify-between mb-3">
+          <div className="max-w-7xl mx-auto px-3 sm:px-4 py-2 sm:py-3">
+            {/* Mobile: Stacked layout */}
+            <div className="flex flex-col gap-3 sm:hidden">
+              <div className="flex items-center justify-between">
+                <h1 className="text-xl font-bold text-stone-900 dark:text-stone-100 tracking-tight">{t('app.title')}</h1>
+                <div className="flex items-center gap-2">
+                  {currentView === 'plan' && <ShareButton slots={slots} weekStartDate={selectedWeek} />}
+                  <NightModeToggle nightMode={nightMode} onToggle={updateNightMode} />
+                  <LanguageSwitcher />
+                </div>
+              </div>
+              <WeekPicker selectedWeek={selectedWeek} onWeekChange={handleWeekChange} />
+            </div>
+
+            {/* Desktop: Side-by-side layout */}
+            <div className="hidden sm:flex items-center justify-between mb-3">
               <div>
                 <h1 className="text-2xl sm:text-3xl font-bold text-stone-900 dark:text-stone-100 tracking-tight mb-2">{t('app.title')}</h1>
                 <WeekPicker selectedWeek={selectedWeek} onWeekChange={handleWeekChange} />
               </div>
               <div className="flex items-center gap-3">
+                {currentView === 'plan' && <ShareButton slots={slots} weekStartDate={selectedWeek} />}
                 <ColorPicker />
                 <NightModeToggle nightMode={nightMode} onToggle={updateNightMode} />
                 <LanguageSwitcher />
               </div>
             </div>
 
-            {/* View Tabs */}
-            <div className="flex gap-2">
+            {/* View Tabs - Better touch targets on mobile */}
+            <div className="flex gap-1.5 sm:gap-2 mt-3 sm:mt-0">
               <button
                 onClick={() => setCurrentView('plan')}
-                className={`flex-1 py-3 px-4 rounded-xl font-semibold text-sm transition-all ${
+                className={`flex-1 py-2.5 sm:py-3 px-2 sm:px-4 rounded-lg sm:rounded-xl font-semibold text-xs sm:text-sm transition-all min-h-[44px] ${
                   currentView === 'plan'
                     ? 'bg-stone-900 dark:bg-stone-100 text-white dark:text-stone-900 shadow-sm'
                     : 'bg-white dark:bg-stone-800 text-stone-600 dark:text-stone-300 hover:bg-stone-100 dark:hover:bg-stone-700'
@@ -93,7 +109,7 @@ function AppContent() {
               </button>
               <button
                 onClick={() => setCurrentView('groceries')}
-                className={`flex-1 py-3 px-4 rounded-xl font-semibold text-sm transition-all ${
+                className={`flex-1 py-2.5 sm:py-3 px-2 sm:px-4 rounded-lg sm:rounded-xl font-semibold text-xs sm:text-sm transition-all min-h-[44px] ${
                   currentView === 'groceries'
                     ? 'bg-stone-900 dark:bg-stone-100 text-white dark:text-stone-900 shadow-sm'
                     : 'bg-white dark:bg-stone-800 text-stone-600 dark:text-stone-300 hover:bg-stone-100 dark:hover:bg-stone-700'
@@ -103,7 +119,7 @@ function AppContent() {
               </button>
               <button
                 onClick={() => setCurrentView('ingredients')}
-                className={`flex-1 py-3 px-4 rounded-xl font-semibold text-sm transition-all ${
+                className={`flex-1 py-2.5 sm:py-3 px-2 sm:px-4 rounded-lg sm:rounded-xl font-semibold text-xs sm:text-sm transition-all min-h-[44px] ${
                   currentView === 'ingredients'
                     ? 'bg-stone-900 dark:bg-stone-100 text-white dark:text-stone-900 shadow-sm'
                     : 'bg-white dark:bg-stone-800 text-stone-600 dark:text-stone-300 hover:bg-stone-100 dark:hover:bg-stone-700'
@@ -115,7 +131,7 @@ function AppContent() {
           </div>
         </header>
 
-        <main className="max-w-7xl mx-auto px-4 py-6">
+        <main className="max-w-7xl mx-auto px-3 sm:px-4 py-4 sm:py-6">
           {currentView === 'plan' ? (
             <>
               <PlanGrid slots={slots} onUpdate={updateSlot} pendingSlotIds={pendingSlotIds} />
