@@ -14,6 +14,7 @@ const translations = {
     // View tabs
     'nav.mealPlan': 'Meal Plan',
     'nav.groceries': 'Groceries',
+    'nav.ingredients': 'Ingredients',
 
     // Meal grid
     'meal.breakfast': 'Breakfast',
@@ -89,6 +90,18 @@ const translations = {
     'mealGenerator.generateNew': 'Generate New',
     'mealGenerator.apply': 'Apply',
     'mealGenerator.openGenerator': 'Generate Meals with AI',
+
+    // Ingredient Bank
+    'ingredients.title': 'Ingredient Bank',
+    'ingredients.subtitle': 'Manage your available ingredients',
+    'ingredients.proteins': 'Proteins',
+    'ingredients.veggies': 'Veggies',
+    'ingredients.carbs': 'Carbs',
+    'ingredients.fats': 'Fats',
+    'ingredients.addPlaceholder': 'Add new ingredient...',
+    'ingredients.add': 'Add',
+    'ingredients.delete': 'Delete',
+    'ingredients.empty': 'No ingredients yet. Add some to get started!',
   },
 
   es: {
@@ -99,6 +112,7 @@ const translations = {
     // View tabs
     'nav.mealPlan': 'Plan de Comidas',
     'nav.groceries': 'Lista de Compras',
+    'nav.ingredients': 'Ingredientes',
 
     // Meal grid
     'meal.breakfast': 'Desayuno',
@@ -174,6 +188,18 @@ const translations = {
     'mealGenerator.generateNew': 'Generar Nuevas',
     'mealGenerator.apply': 'Aplicar',
     'mealGenerator.openGenerator': 'Generar Comidas con IA',
+
+    // Ingredient Bank
+    'ingredients.title': 'Banco de Ingredientes',
+    'ingredients.subtitle': 'Administra tus ingredientes disponibles',
+    'ingredients.proteins': 'Proteínas',
+    'ingredients.veggies': 'Verduras',
+    'ingredients.carbs': 'Carbohidratos',
+    'ingredients.fats': 'Grasas',
+    'ingredients.addPlaceholder': 'Agrega un ingrediente...',
+    'ingredients.add': 'Agregar',
+    'ingredients.delete': 'Eliminar',
+    'ingredients.empty': '¡No hay ingredientes aún. Agrega algunos para empezar!',
   },
 }
 

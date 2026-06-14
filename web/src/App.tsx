@@ -3,14 +3,15 @@ import { usePlanSync } from './hooks/usePlanSync'
 import { useTranslation } from './hooks/useTranslation'
 import { useSettings } from './hooks/useSettings'
 import { PlanGrid } from './components/PlanGrid'
-import { SyncStatus } from './components/SyncStatus'
 import { LanguageSwitcher } from './components/LanguageSwitcher'
 import { ColorPicker } from './components/ColorPicker'
 import { NightModeToggle } from './components/NightModeToggle'
 import { FoodOptionsProvider } from './contexts/FoodOptionsContext'
+import { LanguageProvider } from './contexts/LanguageContext'
 
 // Lazy load heavy components to reduce initial bundle size
 const GroceryView = lazy(() => import('./components/GroceryView').then(m => ({ default: m.GroceryView })))
+const IngredientBank = lazy(() => import('./components/IngredientBank').then(m => ({ default: m.IngredientBank })))
 
 function weekRangeLabel(): string {
   const now = new Date()
@@ -24,7 +25,7 @@ function weekRangeLabel(): string {
   return `${fmt(mon)} – ${fmt(sun)}`
 }
 
-type View = 'plan' | 'groceries'
+type View = 'plan' | 'groceries' | 'ingredients'
 
 export default function App() {
   const [currentView, setCurrentView] = useState<View>('plan')
@@ -33,13 +34,8 @@ export default function App() {
 
   const {
     slots,
-    connected,
     updateSlot,
-    syncMode,
-    setSyncMode,
-    pendingCount,
     pendingSlotIds,
-    flush
   } = usePlanSync()
 
   // Apply dynamic handwriting color via CSS custom property
@@ -56,19 +52,10 @@ export default function App() {
     }
   }, [nightMode])
 
-  const handleSyncToggle = () => {
-    if (syncMode === 'auto') {
-      setSyncMode('manual')
-    } else if (pendingCount > 0) {
-      flush().then(() => setSyncMode('auto'))
-    } else {
-      setSyncMode('auto')
-    }
-  }
-
   return (
-    <FoodOptionsProvider>
-      <div className="min-h-screen bg-stone-50 dark:bg-stone-900 transition-colors">
+    <LanguageProvider>
+      <FoodOptionsProvider>
+        <div className="min-h-screen bg-stone-50 dark:bg-stone-900 transition-colors">
         <header className="sticky top-0 z-10 bg-stone-50/95 dark:bg-stone-900/95 backdrop-blur border-b border-stone-200 dark:border-stone-700">
           <div className="max-w-7xl mx-auto px-4 py-3">
             <div className="flex items-center justify-between mb-3">
@@ -80,14 +67,6 @@ export default function App() {
                 <ColorPicker />
                 <NightModeToggle nightMode={nightMode} onToggle={updateNightMode} />
                 <LanguageSwitcher />
-                {currentView === 'plan' && (
-                  <SyncStatus
-                    connected={connected}
-                    syncMode={syncMode}
-                    pendingCount={pendingCount}
-                    onToggle={handleSyncToggle}
-                  />
-                )}
               </div>
             </div>
 
@@ -113,6 +92,16 @@ export default function App() {
               >
                 {t('nav.groceries')}
               </button>
+              <button
+                onClick={() => setCurrentView('ingredients')}
+                className={`flex-1 py-3 px-4 rounded-xl font-semibold text-sm transition-all ${
+                  currentView === 'ingredients'
+                    ? 'bg-stone-900 dark:bg-stone-100 text-white dark:text-stone-900 shadow-sm'
+                    : 'bg-white dark:bg-stone-800 text-stone-600 dark:text-stone-300 hover:bg-stone-100 dark:hover:bg-stone-700'
+                }`}
+              >
+                {t('nav.ingredients')}
+              </button>
             </div>
           </div>
         </header>
@@ -125,7 +114,7 @@ export default function App() {
                 {t('footer.hint')}
               </footer>
             </>
-          ) : (
+          ) : currentView === 'groceries' ? (
             <Suspense fallback={
               <div className="flex items-center justify-center py-12">
                 <div className="text-stone-500 dark:text-stone-400">Loading...</div>
@@ -133,9 +122,18 @@ export default function App() {
             }>
               <GroceryView />
             </Suspense>
+          ) : (
+            <Suspense fallback={
+              <div className="flex items-center justify-center py-12">
+                <div className="text-stone-500 dark:text-stone-400">Loading...</div>
+              </div>
+            }>
+              <IngredientBank />
+            </Suspense>
           )}
         </main>
-      </div>
-    </FoodOptionsProvider>
+        </div>
+      </FoodOptionsProvider>
+    </LanguageProvider>
   )
 }
