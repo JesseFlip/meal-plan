@@ -7,6 +7,7 @@ import { useTranslation } from '../hooks/useTranslation'
 const MealGenerator = lazy(() => import('./MealGenerator').then(m => ({ default: m.MealGenerator })))
 
 const DAYS = ['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN']
+const DAYS_FULL = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
 const SLOTS = ['Breakfast', 'Lunch', 'Dinner']
 
 type Props = {
@@ -64,78 +65,114 @@ export function PlanGrid({ slots, onUpdate, pendingSlotIds }: Props) {
           />
         </Suspense>
       )}
-      <div className="bg-white dark:bg-stone-800 rounded-xl shadow-sm border border-stone-200 dark:border-stone-700 overflow-x-auto scrollbar-thin">
-        {/* Mobile scroll hint */}
-        <div className="sm:hidden px-3 py-2 bg-amber-50 dark:bg-amber-900/20 border-b border-amber-200 dark:border-amber-800 text-center">
-          <p className="text-xs text-amber-700 dark:text-amber-400">
-            👉 Swipe to see all days
-          </p>
+
+      {/* Desktop: Grid Layout */}
+      <div className="hidden lg:block bg-white dark:bg-stone-800 rounded-xl shadow-sm border border-stone-200 dark:border-stone-700 overflow-hidden">
+        <div className="flex border-b border-stone-200 dark:border-stone-700 bg-stone-900">
+          <div className="w-24 flex-shrink-0" />
+          {DAYS.map((day, idx) => (
+            <div key={day} className="flex-1 min-w-[140px] p-3 text-center">
+              <div className="flex flex-col items-center gap-2">
+                <span className="text-white text-xs font-bold tracking-widest">{day}</span>
+                <div className="text-2xl" title="Auto-calculated from meal ratings">
+                  {getDayStatus(idx)}
+                </div>
+              </div>
+            </div>
+          ))}
         </div>
-        <table className="min-w-full border-collapse">
-          <thead>
-            <tr>
-              <th className="bg-stone-900 text-stone-400 p-3 text-xs font-medium w-24 sm:w-28"></th>
-              {DAYS.map((d, idx) => (
-                <th
-                  key={d}
-                  className="bg-stone-900 text-white p-3 text-xs font-bold tracking-widest text-center min-w-[120px] sm:min-w-[140px]"
-                >
-                  <div className="flex flex-col items-center gap-2">
-                    <span>{d}</span>
-                    <div className="text-2xl" title="Auto-calculated from meal ratings">
-                      {getDayStatus(idx)}
-                    </div>
+
+        {SLOTS.map((slotName, slotIdx) => (
+          <div key={slotName} className="flex border-b border-stone-200 dark:border-stone-700 last:border-b-0">
+            <div className="w-24 flex-shrink-0 bg-stone-50 dark:bg-stone-900 border-r border-stone-200 dark:border-stone-700 p-3 flex items-start">
+              <span className="text-xs font-semibold text-stone-600 dark:text-stone-400 uppercase tracking-wide">
+                {slotName}
+              </span>
+            </div>
+            <div className="flex-1 flex">
+              {DAYS.map((_, dayIdx) => {
+                const slot = getSlot(dayIdx, slotIdx)
+                return (
+                  <div
+                    key={dayIdx}
+                    className="flex-1 min-w-[140px] border-r border-stone-200 dark:border-stone-700 last:border-r-0"
+                  >
+                    {slot && (
+                      <MealCell
+                        slot={slot}
+                        onUpdate={(patch) => onUpdate(slot.id, patch)}
+                        isPending={pendingSlotIds.has(slot.id)}
+                        onCopyToTomorrow={() => copyToTomorrow(slot)}
+                      />
+                    )}
                   </div>
-                </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {SLOTS.map((slotName, slotIdx) => (
-              <tr key={slotName}>
-                <th className="bg-stone-50 border-r border-stone-200 p-3 text-xs font-semibold text-stone-600 text-left uppercase tracking-wide align-top">
-                  {slotName}
-                </th>
-                {DAYS.map((_, dayIdx) => {
-                  const slot = getSlot(dayIdx, slotIdx)
-                  return (
-                    <td
-                      key={dayIdx}
-                      className="border border-stone-200 p-0 align-top"
-                    >
+                )
+              })}
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* Mobile/Tablet: Card Layout */}
+      <div className="lg:hidden flex flex-col gap-4">
+        {DAYS.map((day, dayIdx) => (
+          <div
+            key={day}
+            className="bg-white dark:bg-stone-800 rounded-xl shadow-sm border border-stone-200 dark:border-stone-700 overflow-hidden"
+          >
+            {/* Day Header */}
+            <div className="bg-stone-900 p-4 flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <span className="text-white text-sm font-bold tracking-wide">{DAYS_FULL[dayIdx]}</span>
+                <span className="text-2xl">{getDayStatus(dayIdx)}</span>
+              </div>
+            </div>
+
+            {/* Meals for this day */}
+            <div className="divide-y divide-stone-200 dark:divide-stone-700">
+              {SLOTS.map((slotName, slotIdx) => {
+                const slot = getSlot(dayIdx, slotIdx)
+                return (
+                  <div key={slotName} className="flex flex-col sm:flex-row">
+                    <div className="sm:w-32 flex-shrink-0 bg-stone-50 dark:bg-stone-900 px-4 py-3 flex items-center sm:border-r border-stone-200 dark:border-stone-700">
+                      <span className="text-xs font-semibold text-stone-600 dark:text-stone-400 uppercase tracking-wide">
+                        {slotName}
+                      </span>
+                    </div>
+                    <div className="flex-1">
                       {slot && (
                         <MealCell
                           slot={slot}
                           onUpdate={(patch) => onUpdate(slot.id, patch)}
                           isPending={pendingSlotIds.has(slot.id)}
-                          onCopyToTomorrow={() => copyToTomorrow(slot)}
+                          onCopyToTomorrow={dayIdx < 6 ? () => copyToTomorrow(slot) : undefined}
                         />
                       )}
-                    </td>
-                  )
-                })}
-              </tr>
-            ))}
-          </tbody>
-        </table>
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+        ))}
+      </div>
 
-        {/* AI Meal Generator Button */}
-        <div className="p-4 border-t border-stone-200 dark:border-stone-700 bg-stone-50 dark:bg-stone-800/50">
-          <button
-            onClick={() => setShowMealGenerator(true)}
-            className="w-full py-3 px-6 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white font-semibold rounded-lg transition-all shadow-sm hover:shadow-md flex items-center justify-center gap-2"
+      {/* AI Meal Generator Button */}
+      <div className="mt-6 flex justify-center">
+        <button
+          onClick={() => setShowMealGenerator(true)}
+          className="w-full sm:w-auto px-8 py-4 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white font-semibold rounded-xl transition-all shadow-lg hover:shadow-xl flex items-center justify-center gap-3 group"
+        >
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 24 24"
+            fill="currentColor"
+            className="w-6 h-6 group-hover:scale-110 transition-transform"
           >
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              viewBox="0 0 24 24"
-              fill="currentColor"
-              className="w-5 h-5"
-            >
-              <path d="M11.25 4.533A9.707 9.707 0 006 3a9.735 9.735 0 00-3.25.555.75.75 0 00-.5.707v14.25a.75.75 0 001 .707A8.237 8.237 0 016 18.75c1.995 0 3.823.707 5.25 1.886V4.533zM12.75 20.636A8.214 8.214 0 0118 18.75c.966 0 1.89.166 2.75.47a.75.75 0 001-.708V4.262a.75.75 0 00-.5-.707A9.735 9.735 0 0018 3a9.707 9.707 0 00-5.25 1.533v16.103z" />
-            </svg>
-            {t('mealGenerator.openGenerator')}
-          </button>
-        </div>
+            <path d="M11.25 4.533A9.707 9.707 0 006 3a9.735 9.735 0 00-3.25.555.75.75 0 00-.5.707v14.25a.75.75 0 001 .707A8.237 8.237 0 016 18.75c1.995 0 3.823.707 5.25 1.886V4.533zM12.75 20.636A8.214 8.214 0 0118 18.75c.966 0 1.89.166 2.75.47a.75.75 0 001-.708V4.262a.75.75 0 00-.5-.707A9.735 9.735 0 0018 3a9.707 9.707 0 00-5.25 1.533v16.103z" />
+          </svg>
+          <span className="text-base">{t('mealGenerator.openGenerator')}</span>
+        </button>
       </div>
     </>
   )

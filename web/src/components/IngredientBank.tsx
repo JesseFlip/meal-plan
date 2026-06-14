@@ -248,42 +248,50 @@ export function IngredientBank() {
         </p>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <IngredientCategory
-          title={t('ingredients.proteins')}
-          items={proteins}
-          onAdd={addProtein}
-          onDelete={deleteProtein}
-          placeholder={t('ingredients.addPlaceholder')}
-          colorClass="text-blue-700 dark:text-blue-400"
-        />
+      <div className="flex flex-col md:flex-row md:flex-wrap gap-6">
+        <div className="flex-1 md:min-w-[calc(50%-0.75rem)]">
+          <IngredientCategory
+            title={t('ingredients.proteins')}
+            items={proteins}
+            onAdd={addProtein}
+            onDelete={deleteProtein}
+            placeholder={t('ingredients.addPlaceholder')}
+            colorClass="text-blue-700 dark:text-blue-400"
+          />
+        </div>
 
-        <IngredientCategory
-          title={t('ingredients.veggies')}
-          items={veggies}
-          onAdd={addVeggie}
-          onDelete={deleteVeggie}
-          placeholder={t('ingredients.addPlaceholder')}
-          colorClass="text-green-700 dark:text-green-400"
-        />
+        <div className="flex-1 md:min-w-[calc(50%-0.75rem)]">
+          <IngredientCategory
+            title={t('ingredients.veggies')}
+            items={veggies}
+            onAdd={addVeggie}
+            onDelete={deleteVeggie}
+            placeholder={t('ingredients.addPlaceholder')}
+            colorClass="text-green-700 dark:text-green-400"
+          />
+        </div>
 
-        <IngredientCategory
-          title={t('ingredients.carbs')}
-          items={carbs}
-          onAdd={addCarb}
-          onDelete={deleteCarb}
-          placeholder={t('ingredients.addPlaceholder')}
-          colorClass="text-orange-700 dark:text-orange-400"
-        />
+        <div className="flex-1 md:min-w-[calc(50%-0.75rem)]">
+          <IngredientCategory
+            title={t('ingredients.carbs')}
+            items={carbs}
+            onAdd={addCarb}
+            onDelete={deleteCarb}
+            placeholder={t('ingredients.addPlaceholder')}
+            colorClass="text-orange-700 dark:text-orange-400"
+          />
+        </div>
 
-        <IngredientCategory
-          title={t('ingredients.fats')}
-          items={fats}
-          onAdd={addFat}
-          onDelete={deleteFat}
-          placeholder={t('ingredients.addPlaceholder')}
-          colorClass="text-purple-700 dark:text-purple-400"
-        />
+        <div className="flex-1 md:min-w-[calc(50%-0.75rem)]">
+          <IngredientCategory
+            title={t('ingredients.fats')}
+            items={fats}
+            onAdd={addFat}
+            onDelete={deleteFat}
+            placeholder={t('ingredients.addPlaceholder')}
+            colorClass="text-purple-700 dark:text-purple-400"
+          />
+        </div>
       </div>
     </div>
   )

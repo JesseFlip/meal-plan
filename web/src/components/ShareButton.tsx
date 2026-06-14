@@ -37,6 +37,9 @@ export function ShareButton({ weekStartDate }: Props) {
       })
 
       if (!response.ok) {
+        if (response.status === 404) {
+          throw new Error('Share feature updating - try again in a few minutes')
+        }
         throw new Error('Failed to create share link')
       }
 

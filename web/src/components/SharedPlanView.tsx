@@ -102,42 +102,98 @@ export function SharedPlanView({ shareId }: Props) {
       </header>
 
       <main className="max-w-7xl mx-auto px-3 sm:px-4 py-6">
-        <div className="bg-white dark:bg-stone-800 rounded-xl shadow-sm border border-stone-200 dark:border-stone-700 overflow-x-auto scrollbar-thin mb-6">
-          <div className="sm:hidden px-3 py-2 bg-amber-50 dark:bg-amber-900/20 border-b border-amber-200 dark:border-amber-800 text-center">
-            <p className="text-xs text-amber-700 dark:text-amber-400">
-              👉 Swipe to see all days
-            </p>
+        {/* Desktop: Grid Layout */}
+        <div className="hidden lg:block bg-white dark:bg-stone-800 rounded-xl shadow-sm border border-stone-200 dark:border-stone-700 overflow-hidden mb-6">
+          <div className="flex border-b border-stone-200 dark:border-stone-700 bg-stone-900">
+            <div className="w-24 flex-shrink-0" />
+            {DAYS.map((day) => (
+              <div key={day} className="flex-1 min-w-[140px] p-3 text-center">
+                <span className="text-white text-xs font-bold tracking-widest">{day}</span>
+              </div>
+            ))}
           </div>
 
-          <table className="min-w-full border-collapse">
-            <thead>
-              <tr>
-                <th className="bg-stone-900 text-stone-400 p-3 text-xs font-medium w-24 sm:w-28"></th>
-                {DAYS.map((d, idx) => (
-                  <th
-                    key={d}
-                    className="bg-stone-900 text-white p-3 text-xs font-bold tracking-widest text-center min-w-[120px] sm:min-w-[140px]"
-                  >
-                    {d}
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {SLOTS.map((slotName, slotIdx) => (
-                <tr key={slotName}>
-                  <th className="bg-stone-50 dark:bg-stone-900 border-r border-stone-200 dark:border-stone-700 p-3 text-xs font-semibold text-stone-600 dark:text-stone-400 text-left uppercase tracking-wide align-top">
-                    {slotName}
-                  </th>
-                  {DAYS.map((_, dayIdx) => {
-                    const slot = getSlot(dayIdx, slotIdx)
-                    const hasContent = slot && (slot.protein || slot.veggie || slot.carb_or_fat || slot.text)
+          {SLOTS.map((slotName, slotIdx) => (
+            <div key={slotName} className="flex border-b border-stone-200 dark:border-stone-700 last:border-b-0">
+              <div className="w-24 flex-shrink-0 bg-stone-50 dark:bg-stone-900 border-r border-stone-200 dark:border-stone-700 p-3 flex items-start">
+                <span className="text-xs font-semibold text-stone-600 dark:text-stone-400 uppercase tracking-wide">
+                  {slotName}
+                </span>
+              </div>
+              <div className="flex-1 flex">
+                {DAYS.map((_, dayIdx) => {
+                  const slot = getSlot(dayIdx, slotIdx)
+                  const hasContent = slot && (slot.protein || slot.veggie || slot.carb_or_fat || slot.text)
 
-                    return (
-                      <td
-                        key={dayIdx}
-                        className="border border-stone-200 dark:border-stone-700 p-3 align-top min-h-[100px]"
-                      >
+                  return (
+                    <div
+                      key={dayIdx}
+                      className="flex-1 min-w-[140px] border-r border-stone-200 dark:border-stone-700 last:border-r-0 p-3"
+                    >
+                      {hasContent && (
+                        <div className="space-y-1">
+                          {slot.text && !slot.protein && !slot.veggie && !slot.carb_or_fat && (
+                            <div className="handwritten text-sm font-medium text-stone-900 dark:text-stone-100">
+                              {slot.text}
+                            </div>
+                          )}
+
+                          {slot.protein && (
+                            <div className="text-xs">
+                              <span className="text-stone-500 dark:text-stone-400 font-medium">{t('meal.protein')}:</span>{' '}
+                              <span className="handwritten text-stone-900 dark:text-stone-100">{slot.protein}</span>
+                            </div>
+                          )}
+                          {slot.veggie && (
+                            <div className="text-xs">
+                              <span className="text-stone-500 dark:text-stone-400 font-medium">{t('meal.veggie')}:</span>{' '}
+                              <span className="handwritten text-stone-900 dark:text-stone-100">{slot.veggie}</span>
+                            </div>
+                          )}
+                          {slot.carb_or_fat && (
+                            <div className="text-xs">
+                              <span className="text-stone-500 dark:text-stone-400 font-medium">
+                                {slotIdx === 2 ? t('meal.fat') : t('meal.carb')}:
+                              </span>{' '}
+                              <span className="handwritten text-stone-900 dark:text-stone-100">{slot.carb_or_fat}</span>
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* Mobile/Tablet: Card Layout */}
+        <div className="lg:hidden flex flex-col gap-4 mb-6">
+          {DAYS.map((day, dayIdx) => (
+            <div
+              key={day}
+              className="bg-white dark:bg-stone-800 rounded-xl shadow-sm border border-stone-200 dark:border-stone-700 overflow-hidden"
+            >
+              {/* Day Header */}
+              <div className="bg-stone-900 p-4">
+                <span className="text-white text-sm font-bold tracking-wide">{day}</span>
+              </div>
+
+              {/* Meals for this day */}
+              <div className="divide-y divide-stone-200 dark:divide-stone-700">
+                {SLOTS.map((slotName, slotIdx) => {
+                  const slot = getSlot(dayIdx, slotIdx)
+                  const hasContent = slot && (slot.protein || slot.veggie || slot.carb_or_fat || slot.text)
+
+                  return (
+                    <div key={slotName} className="flex flex-col sm:flex-row">
+                      <div className="sm:w-32 flex-shrink-0 bg-stone-50 dark:bg-stone-900 px-4 py-3 flex items-center sm:border-r border-stone-200 dark:border-stone-700">
+                        <span className="text-xs font-semibold text-stone-600 dark:text-stone-400 uppercase tracking-wide">
+                          {slotName}
+                        </span>
+                      </div>
+                      <div className="flex-1 p-4">
                         {hasContent && (
                           <div className="space-y-1">
                             {slot.text && !slot.protein && !slot.veggie && !slot.carb_or_fat && (
@@ -168,13 +224,13 @@ export function SharedPlanView({ shareId }: Props) {
                             )}
                           </div>
                         )}
-                      </td>
-                    )
-                  })}
-                </tr>
-              ))}
-            </tbody>
-          </table>
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
+          ))}
         </div>
 
         <div className="text-center">
