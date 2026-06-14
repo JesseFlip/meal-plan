@@ -27,7 +27,7 @@ function weekRangeLabel(): string {
 
 type View = 'plan' | 'groceries' | 'ingredients'
 
-export default function App() {
+function AppContent() {
   const [currentView, setCurrentView] = useState<View>('plan')
   const { t } = useTranslation()
   const { handwritingColor, nightMode, updateNightMode } = useSettings()
@@ -53,9 +53,7 @@ export default function App() {
   }, [nightMode])
 
   return (
-    <LanguageProvider>
-      <FoodOptionsProvider>
-        <div className="min-h-screen bg-stone-50 dark:bg-stone-900 transition-colors">
+    <div className="min-h-screen bg-stone-50 dark:bg-stone-900 transition-colors">
         <header className="sticky top-0 z-10 bg-stone-50/95 dark:bg-stone-900/95 backdrop-blur border-b border-stone-200 dark:border-stone-700">
           <div className="max-w-7xl mx-auto px-4 py-3">
             <div className="flex items-center justify-between mb-3">
@@ -132,7 +130,15 @@ export default function App() {
             </Suspense>
           )}
         </main>
-        </div>
+    </div>
+  )
+}
+
+export default function App() {
+  return (
+    <LanguageProvider>
+      <FoodOptionsProvider>
+        <AppContent />
       </FoodOptionsProvider>
     </LanguageProvider>
   )
