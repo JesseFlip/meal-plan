@@ -3,6 +3,7 @@ import { usePlanSync } from './hooks/usePlanSync'
 import { useTranslation } from './hooks/useTranslation'
 import { useSettings } from './hooks/useSettings'
 import { PlanGrid } from './components/PlanGrid'
+import { WeekPicker } from './components/WeekPicker'
 import { LanguageSwitcher } from './components/LanguageSwitcher'
 import { ColorPicker } from './components/ColorPicker'
 import { NightModeToggle } from './components/NightModeToggle'
@@ -13,16 +14,13 @@ import { LanguageProvider } from './contexts/LanguageContext'
 const GroceryView = lazy(() => import('./components/GroceryView').then(m => ({ default: m.GroceryView })))
 const IngredientBank = lazy(() => import('./components/IngredientBank').then(m => ({ default: m.IngredientBank })))
 
-function weekRangeLabel(): string {
-  const now = new Date()
-  const day = now.getDay() // 0=Sun
-  const monOffset = day === 0 ? -6 : 1 - day
-  const mon = new Date(now)
-  mon.setDate(now.getDate() + monOffset)
-  const sun = new Date(mon)
-  sun.setDate(mon.getDate() + 6)
-  const fmt = (d: Date) => d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
-  return `${fmt(mon)} – ${fmt(sun)}`
+function getMondayOfWeek(dateStr?: string): string {
+  const date = dateStr ? new Date(dateStr + 'T00:00:00') : new Date()
+  const dayOfWeek = date.getDay()  // 0=Sun, 1=Mon, ..., 6=Sat
+  const daysToMonday = dayOfWeek === 0 ? -6 : 1 - dayOfWeek
+  const monday = new Date(date)
+  monday.setDate(date.getDate() + daysToMonday)
+  return monday.toISOString().split('T')[0]
 }
 
 type View = 'plan' | 'groceries' | 'ingredients'
@@ -32,11 +30,22 @@ function AppContent() {
   const { t } = useTranslation()
   const { handwritingColor, nightMode, updateNightMode } = useSettings()
 
+  // Week selection with localStorage persistence
+  const [selectedWeek, setSelectedWeek] = useState<string>(() => {
+    const stored = localStorage.getItem('fridgeplan.selectedWeek')
+    return stored || getMondayOfWeek()
+  })
+
+  const handleWeekChange = (week: string) => {
+    setSelectedWeek(week)
+    localStorage.setItem('fridgeplan.selectedWeek', week)
+  }
+
   const {
     slots,
     updateSlot,
     pendingSlotIds,
-  } = usePlanSync()
+  } = usePlanSync(selectedWeek)
 
   // Apply dynamic handwriting color via CSS custom property
   useEffect(() => {
@@ -58,8 +67,8 @@ function AppContent() {
           <div className="max-w-7xl mx-auto px-4 py-3">
             <div className="flex items-center justify-between mb-3">
               <div>
-                <h1 className="text-2xl sm:text-3xl font-bold text-stone-900 dark:text-stone-100 tracking-tight">{t('app.title')}</h1>
-                <p className="text-xs sm:text-sm text-stone-500 dark:text-stone-400 mt-0.5">{t('app.weekOf')} {weekRangeLabel()}</p>
+                <h1 className="text-2xl sm:text-3xl font-bold text-stone-900 dark:text-stone-100 tracking-tight mb-2">{t('app.title')}</h1>
+                <WeekPicker selectedWeek={selectedWeek} onWeekChange={handleWeekChange} />
               </div>
               <div className="flex items-center gap-3">
                 <ColorPicker />

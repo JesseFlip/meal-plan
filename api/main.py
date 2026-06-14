@@ -16,7 +16,7 @@ import os
 import uuid
 import json
 from contextlib import asynccontextmanager
-from datetime import datetime
+from datetime import datetime, date, timedelta
 from typing import Optional, List
 
 from fastapi import (
@@ -35,6 +35,18 @@ from dotenv import load_dotenv
 
 # Load environment variables from .env file
 load_dotenv()
+
+
+# ---------- Helpers ----------
+
+
+def get_monday_of_week(dt: datetime | date) -> date:
+    """Get the Monday (start of week) for a given date."""
+    if isinstance(dt, datetime):
+        dt = dt.date()
+    day_of_week = dt.weekday()  # 0=Mon, 6=Sun
+    monday = dt - timedelta(days=day_of_week)
+    return monday
 
 
 # ---------- Models ----------
@@ -62,6 +74,10 @@ class HouseholdSettings(SQLModel, table=True):
 class MealSlot(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
     household_id: str = Field(foreign_key="household.id", index=True)
+    week_start_date: date = Field(
+        default_factory=lambda: get_monday_of_week(datetime.now()),
+        index=True
+    )  # Monday of the week this slot belongs to
     day: int  # 0=Mon ... 6=Sun
     slot: int  # 0=Breakfast, 1=Lunch, 2=Dinner
     text: str = ""  # Legacy field, kept for backwards compatibility
@@ -70,6 +86,7 @@ class MealSlot(SQLModel, table=True):
     carb_or_fat: str = ""  # Carb for breakfast/lunch, fat for dinner
     person: Optional[str] = None  # None=both, "jesse", "dorys"
     state: str = "planned"  # planned | fasting | skipped | eaten
+    rating: str = ""  # empty | good | bad - for meal feedback
     updated_at: datetime = Field(default_factory=datetime.utcnow)
 
 
@@ -134,6 +151,7 @@ def slot_to_dict(s: MealSlot) -> dict:
     return {
         "id": s.id,
         "household_id": s.household_id,
+        "week_start_date": s.week_start_date.isoformat(),
         "day": s.day,
         "slot": s.slot,
         "text": s.text,
@@ -142,6 +160,7 @@ def slot_to_dict(s: MealSlot) -> dict:
         "carb_or_fat": s.carb_or_fat,
         "person": s.person,
         "state": s.state,
+        "rating": s.rating,
         "updated_at": s.updated_at.isoformat(),
     }
 
@@ -198,6 +217,65 @@ engine = create_engine(
 )
 
 
+# ---------- Database Migration ----------
+
+
+def run_migrations():
+    """
+    Run database migrations for schema changes.
+    This is called on startup before seeding.
+    """
+    if not db_url.startswith("sqlite"):
+        # Skip migrations for non-SQLite databases for now
+        # In production with Postgres, use Alembic
+        return
+
+    import sqlite3
+    db_path = db_url.replace("sqlite:///", "")
+
+    try:
+        conn = sqlite3.connect(db_path)
+        cursor = conn.cursor()
+
+        # Check if mealslot table exists
+        cursor.execute(
+            "SELECT name FROM sqlite_master WHERE type='table' AND name='mealslot'"
+        )
+        if not cursor.fetchone():
+            # Table doesn't exist yet, create_all will handle it
+            conn.close()
+            return
+
+        # Check if week_start_date column exists
+        cursor.execute("PRAGMA table_info(mealslot)")
+        columns = [row[1] for row in cursor.fetchall()]
+
+        if "week_start_date" not in columns:
+            print("Running migration: Adding week_start_date column to mealslot table")
+
+            # Calculate this week's Monday for default value
+            current_week = get_monday_of_week(datetime.now())
+            default_date = current_week.isoformat()
+
+            # Add the column with a default value
+            cursor.execute(
+                f"ALTER TABLE mealslot ADD COLUMN week_start_date DATE DEFAULT '{default_date}'"
+            )
+
+            # Update existing rows to have this week's Monday
+            cursor.execute(
+                f"UPDATE mealslot SET week_start_date = '{default_date}' WHERE week_start_date IS NULL"
+            )
+
+            conn.commit()
+            print(f"Migration complete: Set week_start_date to {default_date} for existing slots")
+
+        conn.close()
+    except Exception as e:
+        print(f"Migration error: {e}")
+        # Don't crash on migration errors - let the app try to continue
+
+
 # Seed data from Dorys's actual whiteboard photo (May 2026)
 SEED_PLAN = [
     # (day, slot, text, person, state)
@@ -242,7 +320,8 @@ def seed_if_empty():
         )
         session.add(settings)
 
-        # Create meal slots
+        # Create meal slots for current week
+        current_week = get_monday_of_week(datetime.now())
         filled = {(d, s): (t, p, st) for d, s, t, p, st in SEED_PLAN}
         for day in range(7):
             for slot in range(3):
@@ -250,6 +329,7 @@ def seed_if_empty():
                 session.add(
                     MealSlot(
                         household_id=default_household.id,
+                        week_start_date=current_week,
                         day=day,
                         slot=slot,
                         text=text,
@@ -434,6 +514,7 @@ manager = ConnectionManager()
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     SQLModel.metadata.create_all(engine)
+    run_migrations()  # Run migrations after table creation
     seed_if_empty()
     yield
 
@@ -542,12 +623,14 @@ def initialize_household(payload: dict):
         )
         session.add(settings)
 
-        # Create empty meal plan
+        # Create empty meal plan for current week
+        current_week = get_monday_of_week(datetime.now())
         for day in range(7):
             for slot in range(3):
                 session.add(
                     MealSlot(
                         household_id=household.id,
+                        week_start_date=current_week,
                         day=day,
                         slot=slot,
                         text="",
@@ -617,16 +700,63 @@ def update_household_settings(
 
 
 @app.get("/api/plan")
-def get_plan(household_id: str = Header(None, alias="X-Household-ID")):
-    """Get all meal slots for a household."""
+def get_plan(
+    week: Optional[str] = None,
+    household_id: str = Header(None, alias="X-Household-ID")
+):
+    """
+    Get all meal slots for a household for a specific week.
+
+    Args:
+        week: ISO date string (YYYY-MM-DD) for the Monday of the week.
+              If not provided, defaults to current week.
+    """
     hh_id = get_household_id(household_id)
 
+    # Parse week parameter or default to current week
+    if week:
+        try:
+            week_date = date.fromisoformat(week)
+            # Normalize to Monday
+            week_date = get_monday_of_week(week_date)
+        except ValueError:
+            raise HTTPException(400, "Invalid week date format. Use YYYY-MM-DD")
+    else:
+        week_date = get_monday_of_week(datetime.now())
+
     with Session(engine) as session:
+        # Try to get slots for the requested week
         slots = session.exec(
             select(MealSlot)
             .where(MealSlot.household_id == hh_id)
+            .where(MealSlot.week_start_date == week_date)
             .order_by(MealSlot.day, MealSlot.slot)
         ).all()
+
+        # If no slots exist for this week, create empty ones
+        if not slots:
+            for day in range(7):
+                for slot in range(3):
+                    new_slot = MealSlot(
+                        household_id=hh_id,
+                        week_start_date=week_date,
+                        day=day,
+                        slot=slot,
+                        text="",
+                        person=None,
+                        state="planned",
+                    )
+                    session.add(new_slot)
+            session.commit()
+
+            # Re-query to get the created slots
+            slots = session.exec(
+                select(MealSlot)
+                .where(MealSlot.household_id == hh_id)
+                .where(MealSlot.week_start_date == week_date)
+                .order_by(MealSlot.day, MealSlot.slot)
+            ).all()
+
         return [slot_to_dict(s) for s in slots]
 
 
@@ -644,7 +774,7 @@ async def update_slot(
         if not slot or slot.household_id != hh_id:
             raise HTTPException(404, "Slot not found")
 
-        for key in ("text", "person", "state", "protein", "veggie", "carb_or_fat"):
+        for key in ("text", "person", "state", "protein", "veggie", "carb_or_fat", "rating"):
             if key in payload:
                 setattr(slot, key, payload[key])
         slot.updated_at = datetime.utcnow()

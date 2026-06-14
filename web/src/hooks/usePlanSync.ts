@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 
 export type Slot = {
   id: number
+  week_start_date: string  // ISO date string (YYYY-MM-DD) for Monday of the week
   day: number
   slot: number
   text: string
@@ -10,6 +11,7 @@ export type Slot = {
   carb_or_fat: string
   person: string | null
   state: 'planned' | 'fasting' | 'skipped' | 'eaten'
+  rating: '' | 'good' | 'bad'
   updated_at: string
 }
 
@@ -54,11 +56,12 @@ const getHeaders = async () => {
   }
 }
 
-export function usePlanSync() {
+export function usePlanSync(selectedWeek?: string) {
   const [slots, setSlots] = useState<Slot[]>([])
   const [connected, setConnected] = useState(false)
   const wsRef = useRef<WebSocket | null>(null)
   const cancelledRef = useRef(false)
+  const selectedWeekRef = useRef(selectedWeek)
 
   // ── Sync mode ──────────────────────────────────────────────────────────────
   // SSR-safe: initialise with 'auto'; read localStorage after mount.
@@ -77,6 +80,11 @@ export function usePlanSync() {
   useEffect(() => {
     syncModeRef.current = syncMode
   }, [syncMode])
+
+  // Keep selectedWeekRef in sync
+  useEffect(() => {
+    selectedWeekRef.current = selectedWeek
+  }, [selectedWeek])
 
   const setSyncMode = (mode: 'auto' | 'manual') => {
     localStorage.setItem('fridgeplan.syncMode', mode)
@@ -113,7 +121,10 @@ export function usePlanSync() {
   const loadPlan = async () => {
     try {
       const headers = await getHeaders()
-      const r = await fetch(`${API}/api/plan`, { headers })
+      const url = selectedWeekRef.current
+        ? `${API}/api/plan?week=${selectedWeekRef.current}`
+        : `${API}/api/plan`
+      const r = await fetch(url, { headers })
       if (r.ok) {
         const data = await r.json()
         if (!cancelledRef.current) setSlots(data)
@@ -173,10 +184,15 @@ export function usePlanSync() {
     }
   }
 
+  // ── Reload when week changes ───────────────────────────────────────────────
+  useEffect(() => {
+    loadPlan()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedWeek])
+
   // ── WebSocket ──────────────────────────────────────────────────────────────
   useEffect(() => {
     cancelledRef.current = false
-    loadPlan()
 
     const connect = () => {
       if (cancelledRef.current) return
@@ -203,16 +219,19 @@ export function usePlanSync() {
         try {
           const msg = JSON.parse(e.data)
           if (msg.type === 'slot.updated') {
-            if (syncModeRef.current === 'auto') {
-              // Auto: apply immediately (existing behaviour).
-              setSlots(prev => prev.map(s => s.id === msg.data.id ? msg.data : s))
-            } else {
-              // Manual: queue; do not apply to display.
-              pendingRemoteRef.current = [
-                ...pendingRemoteRef.current.filter(s => s.id !== msg.data.id),
-                msg.data
-              ]
-              refreshPending()
+            // Only apply updates for the currently selected week
+            if (msg.data.week_start_date === selectedWeekRef.current) {
+              if (syncModeRef.current === 'auto') {
+                // Auto: apply immediately (existing behaviour).
+                setSlots(prev => prev.map(s => s.id === msg.data.id ? msg.data : s))
+              } else {
+                // Manual: queue; do not apply to display.
+                pendingRemoteRef.current = [
+                  ...pendingRemoteRef.current.filter(s => s.id !== msg.data.id),
+                  msg.data
+                ]
+                refreshPending()
+              }
             }
           } else if (msg.type === 'plan.reset') {
             loadPlan()

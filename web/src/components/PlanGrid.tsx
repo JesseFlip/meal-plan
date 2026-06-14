@@ -1,7 +1,6 @@
 import { useState, lazy, Suspense } from 'react'
 import { MealCell } from './MealCell'
 import type { Slot } from '../hooks/usePlanSync'
-import { useCompliance } from '../hooks/useCompliance'
 import { useTranslation } from '../hooks/useTranslation'
 
 // Lazy load MealGenerator since it's a heavy modal only shown on demand
@@ -18,14 +17,27 @@ type Props = {
 
 export function PlanGrid({ slots, onUpdate, pendingSlotIds }: Props) {
   const { t } = useTranslation()
-  const { compliance, toggleDay } = useCompliance()
   const [showMealGenerator, setShowMealGenerator] = useState(false)
 
   const getSlot = (day: number, slot: number) =>
     slots.find(s => s.day === day && s.slot === slot)
 
-  const isCompliant = (day: number) =>
-    compliance.find(c => c.day === day)?.compliant || false
+  // Auto-calculate day compliance based on meal ratings
+  const getDayStatus = (day: number): '😊' | '😐' | '☹️' | '⚪' => {
+    const daySlots = slots.filter(s => s.day === day)
+    const goodMeals = daySlots.filter(s => s.rating === 'good').length
+    const badMeals = daySlots.filter(s => s.rating === 'bad').length
+    const totalMeals = daySlots.length
+
+    // All meals rated good = happy
+    if (goodMeals === totalMeals && totalMeals > 0) return '😊'
+    // Any bad meals = sad
+    if (badMeals > 0) return '☹️'
+    // Some good, but not all = neutral
+    if (goodMeals > 0) return '😐'
+    // No ratings yet = empty
+    return '⚪'
+  }
 
   const copyToTomorrow = (currentSlot: Slot) => {
     const nextDay = (currentSlot.day + 1) % 7
@@ -64,13 +76,9 @@ export function PlanGrid({ slots, onUpdate, pendingSlotIds }: Props) {
                 >
                   <div className="flex flex-col items-center gap-2">
                     <span>{d}</span>
-                    <button
-                      onClick={() => toggleDay(idx)}
-                      className="text-2xl hover:scale-110 transition-transform"
-                      title={isCompliant(idx) ? "Ate as planned! Click to unmark" : "Click to mark as compliant"}
-                    >
-                      {isCompliant(idx) ? '😊' : '⚪'}
-                    </button>
+                    <div className="text-2xl" title="Auto-calculated from meal ratings">
+                      {getDayStatus(idx)}
+                    </div>
                   </div>
                 </th>
               ))}

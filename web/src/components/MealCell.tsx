@@ -377,6 +377,41 @@ export function MealCell({ slot, onUpdate, isPending, onCopyToTomorrow }: Props)
           <span className="text-stone-300 dark:text-stone-600 text-xs">{t('meal.addCell')}</span>
         )}
       </button>
+      {/* Rating buttons */}
+      {hasContent && !fasting && (
+        <div className="absolute bottom-1.5 right-1.5 flex gap-1">
+          <button
+            onClick={(e) => {
+              e.stopPropagation()
+              onUpdate({ rating: slot.rating === 'good' ? '' : 'good' })
+            }}
+            className={`w-6 h-6 flex items-center justify-center rounded transition-all ${
+              slot.rating === 'good'
+                ? 'bg-green-100 border-2 border-green-500 scale-110'
+                : 'bg-white/80 border border-stone-200 opacity-0 group-hover:opacity-100 hover:bg-green-50 hover:border-green-300'
+            }`}
+            title="Mark as good"
+            aria-label="Mark as good"
+          >
+            <span className="text-sm">😊</span>
+          </button>
+          <button
+            onClick={(e) => {
+              e.stopPropagation()
+              onUpdate({ rating: slot.rating === 'bad' ? '' : 'bad' })
+            }}
+            className={`w-6 h-6 flex items-center justify-center rounded transition-all ${
+              slot.rating === 'bad'
+                ? 'bg-red-100 border-2 border-red-500 scale-110'
+                : 'bg-white/80 border border-stone-200 opacity-0 group-hover:opacity-100 hover:bg-red-50 hover:border-red-300'
+            }`}
+            title="Mark as bad"
+            aria-label="Mark as bad"
+          >
+            <span className="text-sm">☹️</span>
+          </button>
+        </div>
+      )}
       {/* Copy to tomorrow button */}
       {hasContent && !fasting && onCopyToTomorrow && slot.day < 6 && (
         <button
