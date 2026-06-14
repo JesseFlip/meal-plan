@@ -16,6 +16,13 @@ type FoodOptionsContextType = {
   deleteVeggie: (id: number) => Promise<void>
   deleteCarb: (id: number) => Promise<void>
   deleteFat: (id: number) => Promise<void>
+  clearAll: () => Promise<void>
+  loadTemplate: (template: {
+    proteins: string[]
+    veggies: string[]
+    carbs: string[]
+    fats: string[]
+  }) => Promise<void>
 }
 
 const FoodOptionsContext = createContext<FoodOptionsContextType | null>(null)

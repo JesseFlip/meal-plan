@@ -193,6 +193,79 @@ export function useFoodOptions() {
     }
   }
 
+  const clearAll = async () => {
+    try {
+      const headers = await getHeaders()
+
+      // Delete all items in parallel
+      const deletePromises = [
+        ...proteins.map(p => fetch(`${API}/api/proteins/${p.id}`, { method: 'DELETE', headers })),
+        ...veggies.map(v => fetch(`${API}/api/veggies/${v.id}`, { method: 'DELETE', headers })),
+        ...carbs.map(c => fetch(`${API}/api/carbs/${c.id}`, { method: 'DELETE', headers })),
+        ...fats.map(f => fetch(`${API}/api/fats/${f.id}`, { method: 'DELETE', headers }))
+      ]
+
+      await Promise.all(deletePromises)
+      loadAllOptions()
+    } catch (e) {
+      console.warn('Failed to clear all ingredients:', e)
+    }
+  }
+
+  const loadTemplate = async (template: {
+    proteins: string[]
+    veggies: string[]
+    carbs: string[]
+    fats: string[]
+  }) => {
+    try {
+      const headers = await getHeaders()
+
+      // Get existing items to avoid duplicates
+      const existingProteins = new Set(proteins.map(p => p.name.toLowerCase()))
+      const existingVeggies = new Set(veggies.map(v => v.name.toLowerCase()))
+      const existingCarbs = new Set(carbs.map(c => c.name.toLowerCase()))
+      const existingFats = new Set(fats.map(f => f.name.toLowerCase()))
+
+      // Only add items that don't already exist
+      const addPromises = [
+        ...template.proteins
+          .filter(name => !existingProteins.has(name.toLowerCase()))
+          .map(name => fetch(`${API}/api/proteins`, {
+            method: 'POST',
+            headers,
+            body: JSON.stringify({ name })
+          })),
+        ...template.veggies
+          .filter(name => !existingVeggies.has(name.toLowerCase()))
+          .map(name => fetch(`${API}/api/veggies`, {
+            method: 'POST',
+            headers,
+            body: JSON.stringify({ name })
+          })),
+        ...template.carbs
+          .filter(name => !existingCarbs.has(name.toLowerCase()))
+          .map(name => fetch(`${API}/api/carbs`, {
+            method: 'POST',
+            headers,
+            body: JSON.stringify({ name })
+          })),
+        ...template.fats
+          .filter(name => !existingFats.has(name.toLowerCase()))
+          .map(name => fetch(`${API}/api/fats`, {
+            method: 'POST',
+            headers,
+            body: JSON.stringify({ name })
+          }))
+      ]
+
+      await Promise.all(addPromises)
+      loadAllOptions()
+    } catch (e) {
+      console.warn('Failed to load template:', e)
+    }
+  }
+
   return {
     proteins,
     veggies,
@@ -206,6 +279,8 @@ export function useFoodOptions() {
     deleteProtein,
     deleteVeggie,
     deleteCarb,
-    deleteFat
+    deleteFat,
+    clearAll,
+    loadTemplate
   }
 }

@@ -106,6 +106,12 @@ const translations = {
     'ingredients.add': 'Add',
     'ingredients.delete': 'Delete',
     'ingredients.empty': 'No ingredients yet. Add some to get started!',
+    'ingredients.templates': 'Templates',
+    'ingredients.loadTemplate': 'Load Template',
+    'ingredients.clearAll': 'Clear All',
+    'ingredients.confirmClear': 'Are you sure you want to delete all ingredients?',
+    'ingredients.template.nutritionFramework': 'Nutrition Framework 2.0',
+    'ingredients.template.none': 'Select a template...',
   },
 
   es: {
@@ -208,6 +214,12 @@ const translations = {
     'ingredients.add': 'Agregar',
     'ingredients.delete': 'Eliminar',
     'ingredients.empty': '¡No hay ingredientes aún. Agrega algunos para empezar!',
+    'ingredients.templates': 'Plantillas',
+    'ingredients.loadTemplate': 'Cargar Plantilla',
+    'ingredients.clearAll': 'Limpiar Todo',
+    'ingredients.confirmClear': '¿Estás seguro de que quieres eliminar todos los ingredientes?',
+    'ingredients.template.nutritionFramework': 'Marco Nutricional 2.0',
+    'ingredients.template.none': 'Selecciona una plantilla...',
   },
 }
 

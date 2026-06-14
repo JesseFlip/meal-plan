@@ -5,6 +5,63 @@ import type { FoodOption } from '../hooks/useFoodOptions'
 
 type Category = 'proteins' | 'veggies' | 'carbs' | 'fats'
 
+// Nutrition Framework 2.0 Template
+const NUTRITION_FRAMEWORK_2_0 = {
+  proteins: [
+    'Chicken Breast',
+    'Ground Beef (96/4)',
+    'Egg Whites',
+    'Greek Yogurt (0%)',
+    'White Fish',
+    'Whey Protein',
+    'Casein Protein',
+    'Pork Tenderloin',
+    'Turkey Sausage',
+    'Edamame',
+    'Cottage Cheese',
+    'Ground Turkey',
+    'Turkey Pepperoni'
+  ],
+  veggies: [
+    'Spinach',
+    'Broccoli',
+    'Asparagus',
+    'Carrots',
+    'Squash',
+    'Beets',
+    'Mixed Greens',
+    'Cherry Tomatoes',
+    'Cucumbers',
+    'Cauliflower',
+    'Bell Peppers',
+    'Kale'
+  ],
+  carbs: [
+    'Sweet Potatoes',
+    'Jasmine Rice',
+    'Brown Rice',
+    'Oats',
+    'Ezekiel Bread',
+    'Cream of Rice',
+    'Sourdough Bread',
+    'Banana',
+    'Rice Cakes',
+    'Cauliflower Crust',
+    'Low-Carb Tortilla'
+  ],
+  fats: [
+    'Avocado',
+    'Almonds',
+    'Walnuts',
+    'Olive Oil',
+    'Goat Cheese',
+    'Macadamia Nut Oil',
+    'Chia Seeds',
+    'Flax Seeds',
+    'Ghee'
+  ]
+}
+
 function IngredientCategory({
   title,
   items,
@@ -102,7 +159,31 @@ export function IngredientBank() {
     deleteVeggie,
     deleteCarb,
     deleteFat,
+    clearAll,
+    loadTemplate
   } = useFoodOptionsContext()
+
+  const [selectedTemplate, setSelectedTemplate] = useState('')
+  const [isLoading, setIsLoading] = useState(false)
+
+  const handleLoadTemplate = async () => {
+    if (selectedTemplate === 'nutrition-framework-2.0') {
+      setIsLoading(true)
+      await loadTemplate(NUTRITION_FRAMEWORK_2_0)
+      setIsLoading(false)
+      setSelectedTemplate('')
+    }
+  }
+
+  const handleClearAll = async () => {
+    if (window.confirm(t('ingredients.confirmClear'))) {
+      setIsLoading(true)
+      await clearAll()
+      setIsLoading(false)
+    }
+  }
+
+  const totalIngredients = proteins.length + veggies.length + carbs.length + fats.length
 
   return (
     <div className="max-w-6xl mx-auto">
@@ -112,6 +193,58 @@ export function IngredientBank() {
         </h2>
         <p className="text-sm text-stone-500 dark:text-stone-400 mt-1">
           {t('ingredients.subtitle')}
+        </p>
+      </div>
+
+      {/* Template Controls */}
+      <div className="mb-6 bg-white dark:bg-stone-800 rounded-xl shadow-sm border border-stone-200 dark:border-stone-700 p-4">
+        <div className="flex flex-col sm:flex-row gap-3">
+          <div className="flex-1">
+            <label className="block text-xs font-medium text-stone-600 dark:text-stone-400 mb-1">
+              {t('ingredients.templates')}
+            </label>
+            <select
+              value={selectedTemplate}
+              onChange={(e) => setSelectedTemplate(e.target.value)}
+              disabled={isLoading}
+              className="w-full px-3 py-2 text-sm border border-stone-300 dark:border-stone-600 rounded-lg bg-white dark:bg-stone-700 text-stone-900 dark:text-stone-100 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <option value="">{t('ingredients.template.none')}</option>
+              <option value="nutrition-framework-2.0">{t('ingredients.template.nutritionFramework')}</option>
+            </select>
+          </div>
+
+          <div className="flex gap-2 sm:items-end">
+            <button
+              onClick={handleLoadTemplate}
+              disabled={!selectedTemplate || isLoading}
+              className="flex-1 sm:flex-none px-4 py-2 text-sm font-semibold bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 disabled:from-stone-300 disabled:to-stone-300 dark:disabled:from-stone-700 dark:disabled:to-stone-700 text-white rounded-lg transition-all shadow-sm hover:shadow-md disabled:cursor-not-allowed disabled:shadow-none"
+            >
+              {isLoading ? '...' : t('ingredients.loadTemplate')}
+            </button>
+
+            <button
+              onClick={handleClearAll}
+              disabled={totalIngredients === 0 || isLoading}
+              className="flex-1 sm:flex-none px-4 py-2 text-sm font-semibold bg-red-500 hover:bg-red-600 disabled:bg-stone-300 dark:disabled:bg-stone-700 text-white rounded-lg transition-colors disabled:cursor-not-allowed"
+            >
+              {t('ingredients.clearAll')}
+            </button>
+          </div>
+        </div>
+
+        {/* Info text */}
+        <p className="text-xs text-stone-500 dark:text-stone-400 mt-3">
+          {totalIngredients > 0 && (
+            <span className="font-medium text-amber-600 dark:text-amber-400">
+              {totalIngredients} {totalIngredients === 1 ? 'ingredient' : 'ingredients'}
+            </span>
+          )}
+          {selectedTemplate === 'nutrition-framework-2.0' && (
+            <span className="ml-2">
+              • High-Performance & Adherence framework with 40+ optimized foods
+            </span>
+          )}
         </p>
       </div>
 
