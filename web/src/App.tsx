@@ -4,6 +4,7 @@ import { useTranslation } from './hooks/useTranslation'
 import { useSettings } from './hooks/useSettings'
 import { PlanGrid } from './components/PlanGrid'
 import { WeekPicker } from './components/WeekPicker'
+import { InstallPrompt } from './components/InstallPrompt'
 import { LanguageSwitcher } from './components/LanguageSwitcher'
 import { ColorPicker } from './components/ColorPicker'
 import { NightModeToggle } from './components/NightModeToggle'
@@ -63,6 +64,7 @@ function AppContent() {
 
   return (
     <div className="min-h-screen bg-stone-50 dark:bg-stone-900 transition-colors">
+        <InstallPrompt />
         <header className="sticky top-0 z-10 bg-stone-50/95 dark:bg-stone-900/95 backdrop-blur border-b border-stone-200 dark:border-stone-700">
           <div className="max-w-7xl mx-auto px-4 py-3">
             <div className="flex items-center justify-between mb-3">

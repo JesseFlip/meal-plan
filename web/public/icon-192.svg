@@ -1,0 +1,11 @@
+<svg width="192" height="192" viewBox="0 0 192 192" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="192" height="192" rx="32" fill="#f59e0b"/>
+  <g transform="translate(96, 96)">
+    <!-- Fork -->
+    <path d="M -35 -40 L -35 30 M -45 -40 L -45 -20 M -25 -40 L -25 -20" stroke="white" stroke-width="6" stroke-linecap="round"/>
+    <!-- Knife -->
+    <path d="M 35 -40 L 35 30 M 25 -40 L 25 -20 L 45 -20 L 45 -40 Z" stroke="white" stroke-width="6" stroke-linecap="round" fill="white"/>
+    <!-- Plate -->
+    <ellipse cx="0" cy="15" rx="55" ry="12" fill="white" opacity="0.3"/>
+  </g>
+</svg>

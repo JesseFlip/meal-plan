@@ -8,19 +8,47 @@ export default defineConfig({
     react(),
     VitePWA({
       registerType: 'autoUpdate',
-      includeAssets: ['favicon.svg'],
+      includeAssets: ['icon-192.svg', 'icon-512.svg', 'apple-touch-icon.svg'],
       manifest: {
-        name: 'FridgePlan',
-        short_name: 'FridgePlan',
-        description: 'Family meal plan command center',
+        name: 'Meal Plan - Weekly Planning & Nutrition',
+        short_name: 'Meal Plan',
+        description: 'Weekly meal planning, grocery lists, and nutrition tracking for families',
         theme_color: '#1c1917',
         background_color: '#fafaf9',
         display: 'standalone',
         orientation: 'any',
         start_url: '/',
+        scope: '/',
+        categories: ['food', 'health', 'lifestyle', 'productivity'],
+        screenshots: [
+          {
+            src: '/screenshot-wide.png',
+            sizes: '1280x720',
+            type: 'image/png',
+            form_factor: 'wide',
+            label: 'Meal planning grid view'
+          },
+          {
+            src: '/screenshot-narrow.png',
+            sizes: '750x1334',
+            type: 'image/png',
+            form_factor: 'narrow',
+            label: 'Mobile meal planner'
+          }
+        ],
         icons: [
-          { src: 'icon-192.png', sizes: '192x192', type: 'image/png' },
-          { src: 'icon-512.png', sizes: '512x512', type: 'image/png' }
+          {
+            src: '/icon-192.svg',
+            sizes: '192x192',
+            type: 'image/svg+xml',
+            purpose: 'any maskable'
+          },
+          {
+            src: '/icon-512.svg',
+            sizes: '512x512',
+            type: 'image/svg+xml',
+            purpose: 'any maskable'
+          }
         ]
       },
       workbox: {

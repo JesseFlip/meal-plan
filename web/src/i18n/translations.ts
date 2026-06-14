@@ -112,6 +112,12 @@ const translations = {
     'ingredients.confirmClear': 'Are you sure you want to delete all ingredients?',
     'ingredients.template.nutritionFramework': 'Nutrition Framework 2.0',
     'ingredients.template.none': 'Select a template...',
+
+    // PWA Install Prompt
+    'pwa.installTitle': 'Install Meal Plan',
+    'pwa.installMessage': 'Add to your home screen for quick access and offline use',
+    'pwa.install': 'Install',
+    'pwa.later': 'Later',
   },
 
   es: {
@@ -220,6 +226,12 @@ const translations = {
     'ingredients.confirmClear': '¿Estás seguro de que quieres eliminar todos los ingredientes?',
     'ingredients.template.nutritionFramework': 'Marco Nutricional 2.0',
     'ingredients.template.none': 'Selecciona una plantilla...',
+
+    // PWA Install Prompt
+    'pwa.installTitle': 'Instalar Plan de Comidas',
+    'pwa.installMessage': 'Agrega a tu pantalla de inicio para acceso rápido y uso sin conexión',
+    'pwa.install': 'Instalar',
+    'pwa.later': 'Más tarde',
   },
 }
 
