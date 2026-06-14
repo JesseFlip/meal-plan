@@ -8,6 +8,7 @@ type Props = {
   slot: Slot
   onUpdate: (patch: Partial<Slot>) => void
   isPending: boolean
+  onCopyToTomorrow?: () => void
 }
 
 // Separate component for food selection dropdown with "Add new" functionality
@@ -113,7 +114,7 @@ function FoodSelect({
   )
 }
 
-export function MealCell({ slot, onUpdate, isPending }: Props) {
+export function MealCell({ slot, onUpdate, isPending, onCopyToTomorrow }: Props) {
   const [editing, setEditing] = useState(false)
   const [protein, setProtein] = useState(slot.protein || '')
   const [veggie, setVeggie] = useState(slot.veggie || '')
@@ -259,7 +260,7 @@ export function MealCell({ slot, onUpdate, isPending }: Props) {
   const hasContent = slot.protein || slot.veggie || slot.carb_or_fat || slot.text
 
   return (
-    <div className="relative">
+    <div className="relative group">
       <button
         onClick={() => setEditing(true)}
         className={`w-full min-h-[88px] sm:min-h-[100px] p-3 text-left hover:bg-amber-50 active:bg-amber-100 transition-colors ${
@@ -296,9 +297,25 @@ export function MealCell({ slot, onUpdate, isPending }: Props) {
           <span className="text-stone-300 text-xs">{t('meal.addCell')}</span>
         )}
       </button>
+      {/* Copy to tomorrow button */}
+      {hasContent && !fasting && onCopyToTomorrow && slot.day < 6 && (
+        <button
+          onClick={(e) => {
+            e.stopPropagation()
+            onCopyToTomorrow()
+          }}
+          className="absolute top-1.5 right-1.5 w-6 h-6 flex items-center justify-center rounded bg-white/80 hover:bg-amber-100 border border-stone-200 hover:border-amber-400 opacity-0 group-hover:opacity-100 transition-opacity shadow-sm"
+          title="Copy to tomorrow"
+          aria-label="Copy to tomorrow"
+        >
+          <svg className="w-3.5 h-3.5 text-stone-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
+          </svg>
+        </button>
+      )}
       {isPending && (
         <span
-          className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-amber-400"
+          className="absolute top-1.5 left-1.5 w-2 h-2 rounded-full bg-amber-400"
           aria-hidden="true"
         />
       )}

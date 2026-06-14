@@ -27,6 +27,20 @@ export function PlanGrid({ slots, onUpdate, pendingSlotIds }: Props) {
   const isCompliant = (day: number) =>
     compliance.find(c => c.day === day)?.compliant || false
 
+  const copyToTomorrow = (currentSlot: Slot) => {
+    const nextDay = (currentSlot.day + 1) % 7
+    const targetSlot = getSlot(nextDay, currentSlot.slot)
+
+    if (targetSlot) {
+      onUpdate(targetSlot.id, {
+        protein: currentSlot.protein,
+        veggie: currentSlot.veggie,
+        carb_or_fat: currentSlot.carb_or_fat,
+        state: 'planned',
+      })
+    }
+  }
+
   return (
     <>
       {showMealGenerator && (
@@ -80,6 +94,7 @@ export function PlanGrid({ slots, onUpdate, pendingSlotIds }: Props) {
                           slot={slot}
                           onUpdate={(patch) => onUpdate(slot.id, patch)}
                           isPending={pendingSlotIds.has(slot.id)}
+                          onCopyToTomorrow={() => copyToTomorrow(slot)}
                         />
                       )}
                     </td>
