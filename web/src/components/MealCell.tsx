@@ -116,6 +116,8 @@ function FoodSelect({
 
 export function MealCell({ slot, onUpdate, isPending, onCopyToTomorrow }: Props) {
   const [editing, setEditing] = useState(false)
+  const [entryMode, setEntryMode] = useState<'simple' | 'detailed'>('simple')
+  const [mealName, setMealName] = useState(slot.text || '')
   const [protein, setProtein] = useState(slot.protein || '')
   const [veggie, setVeggie] = useState(slot.veggie || '')
   const [carbOrFat, setCarbOrFat] = useState(slot.carb_or_fat || '')
@@ -128,27 +130,51 @@ export function MealCell({ slot, onUpdate, isPending, onCopyToTomorrow }: Props)
   // Keep local state in sync if server pushes an update while not editing
   useEffect(() => {
     if (!editing) {
+      setMealName(slot.text || '')
       setProtein(slot.protein || '')
       setVeggie(slot.veggie || '')
       setCarbOrFat(slot.carb_or_fat || '')
+      // Auto-detect which mode to use based on existing data
+      if (slot.text && !slot.protein && !slot.veggie && !slot.carb_or_fat) {
+        setEntryMode('simple')
+      } else if (slot.protein || slot.veggie || slot.carb_or_fat) {
+        setEntryMode('detailed')
+      }
     }
-  }, [slot.protein, slot.veggie, slot.carb_or_fat, editing])
+  }, [slot.text, slot.protein, slot.veggie, slot.carb_or_fat, editing])
 
   const save = () => {
     setEditing(false)
-    // Only update if something changed
-    if (protein === slot.protein && veggie === slot.veggie && carbOrFat === slot.carb_or_fat) {
-      return
+
+    if (entryMode === 'simple') {
+      // Simple mode: just save meal name, clear detailed fields
+      if (mealName.trim() === slot.text && !slot.protein && !slot.veggie && !slot.carb_or_fat) {
+        return // Nothing changed
+      }
+      onUpdate({
+        text: mealName.trim(),
+        protein: '',
+        veggie: '',
+        carb_or_fat: '',
+        state: 'planned',
+      })
+    } else {
+      // Detailed mode: save components, clear meal name
+      if (protein === slot.protein && veggie === slot.veggie && carbOrFat === slot.carb_or_fat && !slot.text) {
+        return // Nothing changed
+      }
+      onUpdate({
+        text: '',
+        protein: protein.trim(),
+        veggie: veggie.trim(),
+        carb_or_fat: carbOrFat.trim(),
+        state: 'planned',
+      })
     }
-    onUpdate({
-      protein: protein.trim(),
-      veggie: veggie.trim(),
-      carb_or_fat: carbOrFat.trim(),
-      state: 'planned'
-    })
   }
 
   const cancel = () => {
+    setMealName(slot.text || '')
     setProtein(slot.protein || '')
     setVeggie(slot.veggie || '')
     setCarbOrFat(slot.carb_or_fat || '')
@@ -170,7 +196,7 @@ export function MealCell({ slot, onUpdate, isPending, onCopyToTomorrow }: Props)
       document.addEventListener('mousedown', handleClickOutside)
       return () => document.removeEventListener('mousedown', handleClickOutside)
     }
-  }, [editing, protein, veggie, carbOrFat])
+  }, [editing, mealName, protein, veggie, carbOrFat])
 
   const isDinner = slot.slot === 2
   const thirdFieldLabel = isDinner ? t('meal.fat') : t('meal.carb')
@@ -184,43 +210,94 @@ export function MealCell({ slot, onUpdate, isPending, onCopyToTomorrow }: Props)
     return (
       <div ref={containerRef} className="relative">
         <div className="space-y-3 p-3 bg-amber-50 border-2 border-amber-400">
-          {guidelines && (
+          {/* Mode Toggle */}
+          <div className="flex gap-1 bg-white rounded-md p-0.5">
+            <button
+              type="button"
+              onClick={() => setEntryMode('simple')}
+              className={`flex-1 px-2 py-1 rounded text-[10px] font-semibold transition-all ${
+                entryMode === 'simple'
+                  ? 'bg-amber-500 text-white'
+                  : 'text-stone-600 hover:text-stone-900'
+              }`}
+            >
+              {t('meal.modeSimple')}
+            </button>
+            <button
+              type="button"
+              onClick={() => setEntryMode('detailed')}
+              className={`flex-1 px-2 py-1 rounded text-[10px] font-semibold transition-all ${
+                entryMode === 'detailed'
+                  ? 'bg-amber-500 text-white'
+                  : 'text-stone-600 hover:text-stone-900'
+              }`}
+            >
+              {t('meal.modeDetailed')}
+            </button>
+          </div>
+
+          {guidelines && entryMode === 'detailed' && (
             <div className="text-[10px] text-amber-700 font-medium mb-1 px-1 py-0.5 bg-amber-100/50 rounded">
               {guidelines}
             </div>
           )}
 
-          <div className="space-y-2">
-            <FoodSelect
-              label={t('meal.protein')}
-              value={protein}
-              onChange={setProtein}
-              options={proteins}
-              onAddNew={addProtein}
-              placeholder={t('meal.selectProtein')}
-              t={t}
-            />
+          {entryMode === 'simple' ? (
+            /* Simple Mode: Just meal name */
+            <div className="space-y-1">
+              <label className="text-[10px] text-stone-600 dark:text-stone-400 font-medium">{t('meal.mealName')}</label>
+              <input
+                type="text"
+                autoFocus
+                value={mealName}
+                onChange={(e) => setMealName(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault()
+                    save()
+                  } else if (e.key === 'Escape') {
+                    e.preventDefault()
+                    cancel()
+                  }
+                }}
+                placeholder={t('meal.mealNamePlaceholder')}
+                className="w-full px-2 py-1.5 text-xs border border-amber-300 rounded bg-white"
+              />
+            </div>
+          ) : (
+            /* Detailed Mode: Protein, veggie, carb/fat */
+            <div className="space-y-2">
+              <FoodSelect
+                label={t('meal.protein')}
+                value={protein}
+                onChange={setProtein}
+                options={proteins}
+                onAddNew={addProtein}
+                placeholder={t('meal.selectProtein')}
+                t={t}
+              />
 
-            <FoodSelect
-              label={t('meal.veggie')}
-              value={veggie}
-              onChange={setVeggie}
-              options={veggies}
-              onAddNew={addVeggie}
-              placeholder={t('meal.selectVeggie')}
-              t={t}
-            />
+              <FoodSelect
+                label={t('meal.veggie')}
+                value={veggie}
+                onChange={setVeggie}
+                options={veggies}
+                onAddNew={addVeggie}
+                placeholder={t('meal.selectVeggie')}
+                t={t}
+              />
 
-            <FoodSelect
-              label={thirdFieldLabel}
-              value={thirdFieldValue}
-              onChange={setThirdFieldValue}
-              options={thirdFieldOptions}
-              onAddNew={addThirdFieldOption}
-              placeholder={isDinner ? t('meal.selectFat') : t('meal.selectCarb')}
-              t={t}
-            />
-          </div>
+              <FoodSelect
+                label={thirdFieldLabel}
+                value={thirdFieldValue}
+                onChange={setThirdFieldValue}
+                options={thirdFieldOptions}
+                onAddNew={addThirdFieldOption}
+                placeholder={isDinner ? t('meal.selectFat') : t('meal.selectCarb')}
+                t={t}
+              />
+            </div>
+          )}
 
           <div className="flex gap-2 justify-end pt-2">
             <button
@@ -269,32 +346,35 @@ export function MealCell({ slot, onUpdate, isPending, onCopyToTomorrow }: Props)
       >
         {hasContent ? (
           <div className="space-y-1">
+            {/* Show meal name if in simple mode */}
+            {slot.text && !slot.protein && !slot.veggie && !slot.carb_or_fat && (
+              <div className={fasting ? 'text-stone-400 italic text-sm' : 'handwritten text-sm font-medium'}>
+                {slot.text}
+              </div>
+            )}
+
+            {/* Show detailed breakdown if available */}
             {slot.protein && (
               <div className="text-xs">
-                <span className="text-stone-500 font-medium">{t('meal.protein')}:</span>{' '}
+                <span className="text-stone-500 dark:text-stone-400 font-medium">{t('meal.protein')}:</span>{' '}
                 <span className="handwritten">{slot.protein}</span>
               </div>
             )}
             {slot.veggie && (
               <div className="text-xs">
-                <span className="text-stone-500 font-medium">{t('meal.veggie')}:</span>{' '}
+                <span className="text-stone-500 dark:text-stone-400 font-medium">{t('meal.veggie')}:</span>{' '}
                 <span className="handwritten">{slot.veggie}</span>
               </div>
             )}
             {slot.carb_or_fat && (
               <div className="text-xs">
-                <span className="text-stone-500 font-medium">{isDinner ? t('meal.fat') : t('meal.carb')}:</span>{' '}
+                <span className="text-stone-500 dark:text-stone-400 font-medium">{isDinner ? t('meal.fat') : t('meal.carb')}:</span>{' '}
                 <span className="handwritten">{slot.carb_or_fat}</span>
               </div>
             )}
-            {slot.text && !slot.protein && !slot.veggie && !slot.carb_or_fat && (
-              <span className={fasting ? 'text-stone-400 italic text-sm' : 'handwritten'}>
-                {slot.text}
-              </span>
-            )}
           </div>
         ) : (
-          <span className="text-stone-300 text-xs">{t('meal.addCell')}</span>
+          <span className="text-stone-300 dark:text-stone-600 text-xs">{t('meal.addCell')}</span>
         )}
       </button>
       {/* Copy to tomorrow button */}

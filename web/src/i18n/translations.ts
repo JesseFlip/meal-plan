@@ -69,6 +69,10 @@ const translations = {
     'meal.guidelineBreakfastLunch': 'Include: lean protein + green leafy veggies + low-starch carb',
     'meal.guidelineDinner': 'Include: lean protein + green leafy veggies + healthy fat',
     'meal.newItem': 'New',
+    'meal.modeSimple': 'Simple',
+    'meal.modeDetailed': 'Detailed',
+    'meal.mealName': 'Meal Name',
+    'meal.mealNamePlaceholder': 'e.g., Chicken Stir Fry',
 
     // Settings
     'settings.colorPicker': 'Text color picker',
@@ -167,6 +171,10 @@ const translations = {
     'meal.guidelineBreakfastLunch': 'Incluye: proteína magra + verduras de hoja verde + carbohidrato bajo en almidón',
     'meal.guidelineDinner': 'Incluye: proteína magra + verduras de hoja verde + grasa saludable',
     'meal.newItem': 'Nueva',
+    'meal.modeSimple': 'Simple',
+    'meal.modeDetailed': 'Detallado',
+    'meal.mealName': 'Nombre de la Comida',
+    'meal.mealNamePlaceholder': 'ej., Pollo Salteado',
 
     // Settings
     'settings.colorPicker': 'Selector de color',
