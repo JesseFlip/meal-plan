@@ -122,7 +122,10 @@ const translations = {
     // Share
     'share.button': 'Share',
     'share.tooltip': 'Share this week\'s meal plan',
-    'share.copied': 'Copied to clipboard!',
+    'share.copied': 'Link copied!',
+    'share.title': 'Check out my meal plan!',
+    'share.message': 'I wanted to share my weekly meal plan with you:',
+    'share.error': 'Failed to create share link. Please try again.',
   },
 
   es: {
@@ -241,7 +244,10 @@ const translations = {
     // Share
     'share.button': 'Compartir',
     'share.tooltip': 'Compartir el plan de comidas de esta semana',
-    'share.copied': '¡Copiado al portapapeles!',
+    'share.copied': '¡Enlace copiado!',
+    'share.title': '¡Mira mi plan de comidas!',
+    'share.message': 'Quiero compartir mi plan semanal de comidas contigo:',
+    'share.error': 'Error al crear enlace. Inténtalo de nuevo.',
   },
 }
 

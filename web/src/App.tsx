@@ -5,6 +5,7 @@ import { useSettings } from './hooks/useSettings'
 import { PlanGrid } from './components/PlanGrid'
 import { WeekPicker } from './components/WeekPicker'
 import { ShareButton } from './components/ShareButton'
+import { SharedPlanView } from './components/SharedPlanView'
 import { InstallPrompt } from './components/InstallPrompt'
 import { LanguageSwitcher } from './components/LanguageSwitcher'
 import { ColorPicker } from './components/ColorPicker'
@@ -73,7 +74,7 @@ function AppContent() {
               <div className="flex items-center justify-between">
                 <h1 className="text-xl font-bold text-stone-900 dark:text-stone-100 tracking-tight">{t('app.title')}</h1>
                 <div className="flex items-center gap-2">
-                  {currentView === 'plan' && <ShareButton slots={slots} weekStartDate={selectedWeek} />}
+                  {currentView === 'plan' && <ShareButton weekStartDate={selectedWeek} />}
                   <NightModeToggle nightMode={nightMode} onToggle={updateNightMode} />
                   <LanguageSwitcher />
                 </div>
@@ -88,7 +89,7 @@ function AppContent() {
                 <WeekPicker selectedWeek={selectedWeek} onWeekChange={handleWeekChange} />
               </div>
               <div className="flex items-center gap-3">
-                {currentView === 'plan' && <ShareButton slots={slots} weekStartDate={selectedWeek} />}
+                {currentView === 'plan' && <ShareButton weekStartDate={selectedWeek} />}
                 <ColorPicker />
                 <NightModeToggle nightMode={nightMode} onToggle={updateNightMode} />
                 <LanguageSwitcher />
@@ -162,6 +163,19 @@ function AppContent() {
 }
 
 export default function App() {
+  // Check if we're on a shared meal plan route
+  const path = window.location.pathname
+  const sharedMatch = path.match(/^\/shared\/([a-zA-Z0-9]+)$/)
+
+  if (sharedMatch) {
+    const shareId = sharedMatch[1]
+    return (
+      <LanguageProvider>
+        <SharedPlanView shareId={shareId} />
+      </LanguageProvider>
+    )
+  }
+
   return (
     <LanguageProvider>
       <FoodOptionsProvider>

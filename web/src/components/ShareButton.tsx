@@ -1,77 +1,71 @@
 import { useState } from 'react'
 import { useTranslation } from '../hooks/useTranslation'
-import type { Slot } from '../hooks/usePlanSync'
 
 type Props = {
-  slots: Slot[]
   weekStartDate: string
 }
 
-const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
-const SLOTS = ['Breakfast', 'Lunch', 'Dinner']
+const API = import.meta.env.VITE_API_URL || ''
 
-function formatWeekRange(mondayStr: string): string {
-  const monday = new Date(mondayStr + 'T00:00:00')
-  const sunday = new Date(monday)
-  sunday.setDate(monday.getDate() + 6)
-
-  const fmt = (d: Date) => d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
-  return `${fmt(monday)} – ${fmt(sunday)}`
+const getHouseholdId = (): string | null => {
+  return localStorage.getItem('fridgeplan.householdId')
 }
 
-export function ShareButton({ slots, weekStartDate }: Props) {
+const getHeaders = async () => {
+  const householdId = getHouseholdId()
+  return {
+    'Content-Type': 'application/json',
+    'X-Household-ID': householdId || ''
+  }
+}
+
+export function ShareButton({ weekStartDate }: Props) {
   const { t } = useTranslation()
+  const [isCreating, setIsCreating] = useState(false)
   const [showCopied, setShowCopied] = useState(false)
 
-  const generateMealPlanText = () => {
-    const weekRange = formatWeekRange(weekStartDate)
-    let text = `🍽️ Meal Plan - Week of ${weekRange}\n\n`
-
-    DAYS.forEach((day, dayIdx) => {
-      const daySlots = slots.filter(s => s.day === dayIdx)
-      if (daySlots.some(s => s.text || s.protein || s.veggie || s.carb_or_fat)) {
-        text += `📅 ${day}\n`
-
-        SLOTS.forEach((slotName, slotIdx) => {
-          const slot = daySlots.find(s => s.slot === slotIdx)
-          if (slot) {
-            if (slot.text) {
-              text += `  ${slotName}: ${slot.text}\n`
-            } else if (slot.protein || slot.veggie || slot.carb_or_fat) {
-              const parts = [slot.protein, slot.veggie, slot.carb_or_fat].filter(Boolean)
-              text += `  ${slotName}: ${parts.join(', ')}\n`
-            }
-          }
-        })
-        text += '\n'
-      }
-    })
-
-    text += '\n📱 Created with Meal Plan App\n'
-    text += 'https://mealp.netlify.app'
-
-    return text
-  }
-
   const handleShare = async () => {
-    const text = generateMealPlanText()
+    setIsCreating(true)
 
-    // Try Web Share API first (mobile devices)
-    if (navigator.share) {
-      try {
-        await navigator.share({
-          title: 'My Meal Plan',
-          text: text,
-        })
-      } catch (err) {
-        // User cancelled or error - try clipboard fallback
-        if (err instanceof Error && err.name !== 'AbortError') {
-          copyToClipboard(text)
-        }
+    try {
+      // Create shareable link
+      const headers = await getHeaders()
+      const response = await fetch(`${API}/api/share`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({ week_start_date: weekStartDate })
+      })
+
+      if (!response.ok) {
+        throw new Error('Failed to create share link')
       }
-    } else {
-      // Fallback to clipboard for desktop
-      copyToClipboard(text)
+
+      const data = await response.json()
+      const shareUrl = data.share_url
+
+      // Try Web Share API first (mobile devices)
+      if (navigator.share) {
+        try {
+          await navigator.share({
+            title: t('share.title'),
+            text: t('share.message'),
+            url: shareUrl,
+          })
+        } catch (err) {
+          // User cancelled or error - try clipboard fallback
+          if (err instanceof Error && err.name !== 'AbortError') {
+            await copyToClipboard(shareUrl)
+          }
+        }
+      } else {
+        // Fallback to clipboard for desktop
+        await copyToClipboard(shareUrl)
+      }
+    } catch (error) {
+      console.error('Failed to share:', error)
+      alert(t('share.error'))
+    } finally {
+      setIsCreating(false)
     }
   }
 
@@ -89,22 +83,30 @@ export function ShareButton({ slots, weekStartDate }: Props) {
     <div className="relative">
       <button
         onClick={handleShare}
-        className="flex items-center gap-2 px-4 py-2 bg-white dark:bg-stone-800 hover:bg-stone-50 dark:hover:bg-stone-700 text-stone-700 dark:text-stone-300 font-medium text-sm rounded-lg border border-stone-300 dark:border-stone-600 transition-colors shadow-sm"
+        disabled={isCreating}
+        className="flex items-center gap-2 px-4 py-2 bg-white dark:bg-stone-800 hover:bg-stone-50 dark:hover:bg-stone-700 text-stone-700 dark:text-stone-300 font-medium text-sm rounded-lg border border-stone-300 dark:border-stone-600 transition-colors shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
         title={t('share.tooltip')}
       >
-        <svg
-          className="w-4 h-4"
-          fill="none"
-          stroke="currentColor"
-          viewBox="0 0 24 24"
-        >
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeWidth={2}
-            d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z"
-          />
-        </svg>
+        {isCreating ? (
+          <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+          </svg>
+        ) : (
+          <svg
+            className="w-4 h-4"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z"
+            />
+          </svg>
+        )}
         <span className="hidden sm:inline">{t('share.button')}</span>
       </button>
 

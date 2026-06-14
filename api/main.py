@@ -147,6 +147,15 @@ class FatOption(SQLModel, table=True):
     created_at: datetime = Field(default_factory=datetime.utcnow)
 
 
+class SharedMealPlan(SQLModel, table=True):
+    id: str = Field(default_factory=lambda: str(uuid.uuid4())[:8], primary_key=True)
+    created_by_household: str = Field(foreign_key="household.id", index=True)
+    week_start_date: date
+    meal_data: str  # JSON string of meal slots
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+    view_count: int = 0
+
+
 def slot_to_dict(s: MealSlot) -> dict:
     return {
         "id": s.id,
@@ -1479,6 +1488,89 @@ Make sure to use ONLY ingredients from the lists provided above."""
             raise HTTPException(500, f"Failed to parse AI response: {str(e)}")
         except Exception as e:
             raise HTTPException(500, f"Error generating meals: {str(e)}")
+
+
+# ---------- Shareable Meal Plans ----------
+
+
+@app.post("/api/share")
+def create_shareable_plan(
+    payload: dict, household_id: str = Header(None, alias="X-Household-ID")
+):
+    """
+    Create a shareable link for a meal plan.
+    Payload should contain: week_start_date (YYYY-MM-DD)
+    Returns: { share_id, share_url }
+    """
+    hh_id = get_household_id(household_id)
+    week_str = payload.get("week_start_date")
+
+    if not week_str:
+        raise HTTPException(400, "week_start_date required")
+
+    try:
+        week_date = date.fromisoformat(week_str)
+        week_date = get_monday_of_week(week_date)
+    except ValueError:
+        raise HTTPException(400, "Invalid date format. Use YYYY-MM-DD")
+
+    with Session(engine) as session:
+        # Get all slots for this week
+        slots = session.exec(
+            select(MealSlot)
+            .where(MealSlot.household_id == hh_id)
+            .where(MealSlot.week_start_date == week_date)
+            .order_by(MealSlot.day, MealSlot.slot)
+        ).all()
+
+        if not slots:
+            raise HTTPException(404, "No meal plan found for this week")
+
+        # Convert slots to JSON
+        meal_data = json.dumps([slot_to_dict(s) for s in slots])
+
+        # Create shared plan
+        shared_plan = SharedMealPlan(
+            created_by_household=hh_id,
+            week_start_date=week_date,
+            meal_data=meal_data,
+        )
+
+        session.add(shared_plan)
+        session.commit()
+        session.refresh(shared_plan)
+
+        return {
+            "share_id": shared_plan.id,
+            "share_url": f"https://mealp.netlify.app/shared/{shared_plan.id}",
+        }
+
+
+@app.get("/api/shared/{share_id}")
+def get_shared_plan(share_id: str):
+    """
+    Retrieve a shared meal plan by ID.
+    Returns: { week_start_date, slots }
+    """
+    with Session(engine) as session:
+        shared_plan = session.get(SharedMealPlan, share_id)
+
+        if not shared_plan:
+            raise HTTPException(404, "Shared meal plan not found")
+
+        # Increment view count
+        shared_plan.view_count += 1
+        session.add(shared_plan)
+        session.commit()
+
+        # Parse meal data
+        slots = json.loads(shared_plan.meal_data)
+
+        return {
+            "week_start_date": shared_plan.week_start_date.isoformat(),
+            "slots": slots,
+            "shared": True,
+        }
 
 
 @app.websocket("/ws")
