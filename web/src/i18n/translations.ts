@@ -98,7 +98,7 @@ const translations = {
 
     // View tabs
     'nav.mealPlan': 'Plan de Comidas',
-    'nav.groceries': 'Compras',
+    'nav.groceries': 'Lista de Compras',
 
     // Meal grid
     'meal.breakfast': 'Desayuno',
@@ -120,53 +120,53 @@ const translations = {
     'sync.offline': 'Sin Conexión',
 
     // Grocery categories
-    'grocery.produce': 'Productos Frescos',
+    'grocery.produce': 'Frutas y Verduras',
     'grocery.protein': 'Proteínas',
     'grocery.dairy': 'Lácteos',
     'grocery.pantry': 'Despensa',
     'grocery.other': 'Otros',
 
     // Grocery actions
-    'grocery.addPlaceholder': 'Agregar algo a la lista...',
-    'grocery.addButton': 'Agregar artículo',
+    'grocery.addPlaceholder': 'Agrega algo a la lista...',
+    'grocery.addButton': 'Agregar',
     'grocery.fromPlan': 'Del Plan',
-    'grocery.refresh': 'Actualizar del Plan',
+    'grocery.refresh': 'Actualizar desde el Plan',
     'grocery.clearBought': 'Limpiar Comprados',
 
     // Footer
-    'footer.hint': 'toca cualquier celda para editar · los cambios se sincronizan en vivo',
+    'footer.hint': 'toca cualquier celda para editar · los cambios se sincronizan en tiempo real',
 
     // Meal editor
     'meal.protein': 'Proteína',
     'meal.veggie': 'Verdura',
     'meal.carb': 'Carbohidrato',
     'meal.fat': 'Grasa',
-    'meal.selectProtein': 'Seleccionar proteína...',
-    'meal.selectVeggie': 'Seleccionar verdura...',
-    'meal.selectCarb': 'Seleccionar carbohidrato...',
-    'meal.selectFat': 'Seleccionar grasa...',
-    'meal.addNew': 'Agregar nuevo',
+    'meal.selectProtein': 'Selecciona proteína...',
+    'meal.selectVeggie': 'Selecciona verdura...',
+    'meal.selectCarb': 'Selecciona carbohidrato...',
+    'meal.selectFat': 'Selecciona grasa...',
+    'meal.addNew': 'Agregar nueva',
     'meal.addButton': 'Agregar',
     'meal.cancel': 'Cancelar',
     'meal.save': 'Guardar',
     'meal.addCell': '+ agregar',
-    'meal.guidelineBreakfastLunch': 'Incluir: proteína magra + verduras de hoja verde + carbohidrato bajo en almidón',
-    'meal.guidelineDinner': 'Incluir: proteína magra + verduras de hoja verde + grasa saludable',
-    'meal.newItem': 'Nuevo',
+    'meal.guidelineBreakfastLunch': 'Incluye: proteína magra + verduras de hoja verde + carbohidrato bajo en almidón',
+    'meal.guidelineDinner': 'Incluye: proteína magra + verduras de hoja verde + grasa saludable',
+    'meal.newItem': 'Nueva',
 
     // Settings
-    'settings.colorPicker': 'Selector de color de texto',
+    'settings.colorPicker': 'Selector de color',
     'settings.textColor': 'Color de Texto',
-    'settings.presets': 'Predefinidos',
+    'settings.presets': 'Preestablecidos',
     'settings.nightMode': 'Modo nocturno',
-    'settings.nightModeOn': 'Cambiar a modo nocturno',
-    'settings.nightModeOff': 'Cambiar a modo día',
+    'settings.nightModeOn': 'Activar modo nocturno',
+    'settings.nightModeOff': 'Activar modo día',
 
     // Meal Generator
-    'mealGenerator.title': 'Generador de Comidas IA',
-    'mealGenerator.subtitle': 'Genere sugerencias de comidas saludables basadas en sus ingredientes disponibles',
+    'mealGenerator.title': 'Generador de Comidas con IA',
+    'mealGenerator.subtitle': 'Genera sugerencias de comidas saludables basadas en tus ingredientes',
     'mealGenerator.numMeals': 'Número de Comidas',
-    'mealGenerator.dietaryPreferences': 'Preferencias Dietéticas (Opcional)',
+    'mealGenerator.dietaryPreferences': 'Preferencias Alimentarias (Opcional)',
     'mealGenerator.dietaryPlaceholder': 'ej., vegetariano, sin gluten, bajo en carbohidratos...',
     'mealGenerator.generate': 'Generar Comidas',
     'mealGenerator.generating': 'Generando...',
