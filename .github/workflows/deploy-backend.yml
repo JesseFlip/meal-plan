@@ -30,10 +30,18 @@ jobs:
 
           # Create .ssh directory and add EC2 host to known_hosts
           mkdir -p ~/.ssh
-          ssh-keyscan -H $EC2_HOST >> ~/.ssh/known_hosts
+          ssh-keyscan -H $EC2_HOST >> ~/.ssh/known_hosts 2>&1
+
+          # Test SSH connection first with verbose output
+          echo "Testing SSH connection..."
+          ssh -i key.pem -o StrictHostKeyChecking=no -o ConnectTimeout=10 -v $EC2_USER@$EC2_HOST 'echo "Connection successful"' 2>&1 || {
+            echo "SSH connection failed"
+            exit 1
+          }
 
           # Run deployment script on EC2
-          ssh -i key.pem -o StrictHostKeyChecking=no $EC2_USER@$EC2_HOST '/home/ubuntu/deploy.sh'
+          echo "Running deployment script..."
+          ssh -i key.pem -o StrictHostKeyChecking=no $EC2_USER@$EC2_HOST '/home/ubuntu/deploy.sh' 2>&1
 
           # Clean up
           rm -f key.pem
