@@ -60,26 +60,17 @@ export function MealGenerator({ onClose, slots, onUpdate }: Props) {
       if (!householdId) return
 
       try {
-        const [proteins, veggies, carbs, fats] = await Promise.all([
-          fetch(`${API}/api/proteins`, {
-            headers: { 'X-Household-ID': householdId }
-          }).then(r => r.json()),
-          fetch(`${API}/api/veggies`, {
-            headers: { 'X-Household-ID': householdId }
-          }).then(r => r.json()),
-          fetch(`${API}/api/carbs`, {
-            headers: { 'X-Household-ID': householdId }
-          }).then(r => r.json()),
-          fetch(`${API}/api/fats`, {
-            headers: { 'X-Household-ID': householdId }
-          }).then(r => r.json())
-        ])
+        // Use consolidated endpoint instead of 4 separate calls
+        const response = await fetch(`${API}/api/ingredients`, {
+          headers: { 'X-Household-ID': householdId }
+        })
+        const data = await response.json()
 
         setIngredients({
-          proteins: proteins.map((p: any) => p.name),
-          veggies: veggies.map((v: any) => v.name),
-          carbs: carbs.map((c: any) => c.name),
-          fats: fats.map((f: any) => f.name)
+          proteins: data.proteins.map((p: any) => p.name),
+          veggies: data.veggies.map((v: any) => v.name),
+          carbs: data.carbs.map((c: any) => c.name),
+          fats: data.fats.map((f: any) => f.name),
         })
       } catch (err) {
         console.error('Failed to fetch ingredients:', err)

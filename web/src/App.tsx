@@ -1,14 +1,16 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, lazy, Suspense } from 'react'
 import { usePlanSync } from './hooks/usePlanSync'
 import { useTranslation } from './hooks/useTranslation'
 import { useSettings } from './hooks/useSettings'
 import { PlanGrid } from './components/PlanGrid'
-import { GroceryView } from './components/GroceryView'
 import { SyncStatus } from './components/SyncStatus'
 import { LanguageSwitcher } from './components/LanguageSwitcher'
 import { ColorPicker } from './components/ColorPicker'
 import { NightModeToggle } from './components/NightModeToggle'
 import { FoodOptionsProvider } from './contexts/FoodOptionsContext'
+
+// Lazy load heavy components to reduce initial bundle size
+const GroceryView = lazy(() => import('./components/GroceryView').then(m => ({ default: m.GroceryView })))
 
 function weekRangeLabel(): string {
   const now = new Date()
@@ -124,7 +126,13 @@ export default function App() {
               </footer>
             </>
           ) : (
-            <GroceryView />
+            <Suspense fallback={
+              <div className="flex items-center justify-center py-12">
+                <div className="text-stone-500 dark:text-stone-400">Loading...</div>
+              </div>
+            }>
+              <GroceryView />
+            </Suspense>
           )}
         </main>
       </div>

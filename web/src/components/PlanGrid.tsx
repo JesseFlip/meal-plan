@@ -1,9 +1,11 @@
-import { useState } from 'react'
+import { useState, lazy, Suspense } from 'react'
 import { MealCell } from './MealCell'
-import { MealGenerator } from './MealGenerator'
 import type { Slot } from '../hooks/usePlanSync'
 import { useCompliance } from '../hooks/useCompliance'
 import { useTranslation } from '../hooks/useTranslation'
+
+// Lazy load MealGenerator since it's a heavy modal only shown on demand
+const MealGenerator = lazy(() => import('./MealGenerator').then(m => ({ default: m.MealGenerator })))
 
 const DAYS = ['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN']
 const SLOTS = ['Breakfast', 'Lunch', 'Dinner']
@@ -28,11 +30,13 @@ export function PlanGrid({ slots, onUpdate, pendingSlotIds }: Props) {
   return (
     <>
       {showMealGenerator && (
-        <MealGenerator
-          onClose={() => setShowMealGenerator(false)}
-          slots={slots}
-          onUpdate={onUpdate}
-        />
+        <Suspense fallback={null}>
+          <MealGenerator
+            onClose={() => setShowMealGenerator(false)}
+            slots={slots}
+            onUpdate={onUpdate}
+          />
+        </Suspense>
       )}
       <div className="bg-white dark:bg-stone-800 rounded-xl shadow-sm border border-stone-200 dark:border-stone-700 overflow-x-auto">
         <table className="min-w-full border-collapse">

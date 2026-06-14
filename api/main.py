@@ -1163,6 +1163,44 @@ def get_fats(household_id: str = Header(None, alias="X-Household-ID")):
         return [{"id": f.id, "name": f.name} for f in fats]
 
 
+@app.get("/api/ingredients")
+def get_all_ingredients(household_id: str = Header(None, alias="X-Household-ID")):
+    """Get all ingredient options (proteins, veggies, carbs, fats) in a single request."""
+    hh_id = get_household_id(household_id)
+
+    with Session(engine) as session:
+        proteins = session.exec(
+            select(ProteinOption)
+            .where(ProteinOption.household_id == hh_id)
+            .order_by(ProteinOption.name)
+        ).all()
+
+        veggies = session.exec(
+            select(VeggieOption)
+            .where(VeggieOption.household_id == hh_id)
+            .order_by(VeggieOption.name)
+        ).all()
+
+        carbs = session.exec(
+            select(CarbOption)
+            .where(CarbOption.household_id == hh_id)
+            .order_by(CarbOption.name)
+        ).all()
+
+        fats = session.exec(
+            select(FatOption)
+            .where(FatOption.household_id == hh_id)
+            .order_by(FatOption.name)
+        ).all()
+
+        return {
+            "proteins": [{"id": p.id, "name": p.name} for p in proteins],
+            "veggies": [{"id": v.id, "name": v.name} for v in veggies],
+            "carbs": [{"id": c.id, "name": c.name} for c in carbs],
+            "fats": [{"id": f.id, "name": f.name} for f in fats],
+        }
+
+
 @app.post("/api/fats")
 def add_fat(payload: dict, household_id: str = Header(None, alias="X-Household-ID")):
     """Add a new fat option."""
