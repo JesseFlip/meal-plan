@@ -75,8 +75,7 @@ class MealSlot(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
     household_id: str = Field(foreign_key="household.id", index=True)
     week_start_date: date = Field(
-        default_factory=lambda: get_monday_of_week(datetime.now()),
-        index=True
+        default_factory=lambda: get_monday_of_week(datetime.now()), index=True
     )  # Monday of the week this slot belongs to
     day: int  # 0=Mon ... 6=Sun
     slot: int  # 0=Breakfast, 1=Lunch, 2=Dinner
@@ -241,6 +240,7 @@ def run_migrations():
         return
 
     import sqlite3
+
     db_path = db_url.replace("sqlite:///", "")
 
     try:
@@ -278,7 +278,9 @@ def run_migrations():
             )
 
             conn.commit()
-            print(f"Migration complete: Set week_start_date to {default_date} for existing slots")
+            print(
+                f"Migration complete: Set week_start_date to {default_date} for existing slots"
+            )
 
         conn.close()
     except Exception as e:
@@ -711,8 +713,7 @@ def update_household_settings(
 
 @app.get("/api/plan")
 def get_plan(
-    week: Optional[str] = None,
-    household_id: str = Header(None, alias="X-Household-ID")
+    week: Optional[str] = None, household_id: str = Header(None, alias="X-Household-ID")
 ):
     """
     Get all meal slots for a household for a specific week.
@@ -784,7 +785,15 @@ async def update_slot(
         if not slot or slot.household_id != hh_id:
             raise HTTPException(404, "Slot not found")
 
-        for key in ("text", "person", "state", "protein", "veggie", "carb_or_fat", "rating"):
+        for key in (
+            "text",
+            "person",
+            "state",
+            "protein",
+            "veggie",
+            "carb_or_fat",
+            "rating",
+        ):
             if key in payload:
                 setattr(slot, key, payload[key])
         slot.updated_at = datetime.utcnow()
