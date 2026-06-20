@@ -1,5 +1,7 @@
 # Deployment Guide
 
+> **NOTE**: The original Railway deployment is documented below. The project is currently running on **EC2** at `50.19.129.245:8002`. See [EC2 Deployment](#ec2-deployment-current) for the current setup.
+
 End-to-end setup so merges to `main` auto-deploy to a live URL. Three accounts, ~30 minutes the first time, ~0 minutes after.
 
 ## TL;DR architecture
@@ -216,3 +218,131 @@ Most production breakages are one of:
 - Service worker stuck on an old cache (bump the SW version in `vite.config.ts` or hit Fully Kiosk's "clear cache")
 
 If you can't fix it in 15 minutes, roll back the last deploy and open a spec for the proper fix.
+
+---
+
+## EC2 Deployment (Current)
+
+The backend is currently running on **AWS EC2** at `http://50.19.129.245:8002`.
+
+### Current Issue
+
+GitHub Actions deployment via SSH is **failing** - the EC2 security group blocks SSH from GitHub Actions IP ranges. The workflow times out without connecting.
+
+### Solution Options
+
+**Option 1: Webhook-Based Deployment** (Recommended)
+
+Instead of GitHub pushing via SSH, EC2 hosts a webhook that GitHub triggers:
+
+1. **On EC2 server**, set up the webhook service:
+   ```bash
+   ssh ubuntu@50.19.129.245
+   
+   # Generate webhook secret
+   openssl rand -hex 32  # Save this for GitHub
+   
+   # Pull latest code to get webhook script
+   cd /home/ubuntu/meal-plan
+   git pull origin main
+   
+   # Create systemd service
+   sudo tee /etc/systemd/system/deploy-webhook.service > /dev/null <<'EOF'
+   [Unit]
+   Description=Deployment Webhook Service
+   After=network.target
+
+   [Service]
+   Type=simple
+   User=ubuntu
+   WorkingDirectory=/home/ubuntu/meal-plan/api
+   Environment="WEBHOOK_SECRET=PUT_YOUR_SECRET_HERE"
+   ExecStart=/usr/bin/python3 -m uvicorn deploy_webhook:app --host 0.0.0.0 --port 8003
+   Restart=always
+
+   [Install]
+   WantedBy=multi-user.target
+   EOF
+   
+   # Edit to add your secret
+   sudo nano /etc/systemd/system/deploy-webhook.service
+   
+   # Start service
+   sudo systemctl daemon-reload
+   sudo systemctl enable --now deploy-webhook
+   sudo systemctl status deploy-webhook
+   ```
+
+2. **Update EC2 security group** to allow TCP 8003 from GitHub Actions IPs or `0.0.0.0/0`
+
+3. **Add GitHub secret** `DEPLOY_WEBHOOK_SECRET` in repo Settings → Secrets
+
+4. **Disable old workflow**:
+   ```bash
+   git mv .github/workflows/deploy-backend.yml .github/workflows/deploy-backend.yml.disabled
+   ```
+
+5. **Test webhook deployment**:
+   ```bash
+   gh workflow run deploy-backend-webhook.yml
+   gh run watch
+   ```
+
+**Option 2: Fix SSH Access**
+
+1. **Allow GitHub Actions IPs** in EC2 security group (port 22):
+   - `140.82.112.0/20`
+   - `143.55.64.0/20`
+   - `185.199.108.0/22`
+   - `192.30.252.0/22`
+   - Plus several others - see [GitHub's IP ranges](https://api.github.com/meta)
+
+2. **Verify EC2_SSH_KEY secret** is correct in GitHub repo Settings
+
+**Option 3: Manual Deployment** (Current Workaround)
+
+Until automated deployment is fixed:
+
+```bash
+# SSH and pull changes
+ssh ubuntu@50.19.129.245 '/home/ubuntu/deploy.sh'
+
+# Verify deployment
+bash check-backend.sh
+```
+
+### Checking Backend Status
+
+```bash
+# Run diagnostic script
+bash check-backend.sh
+
+# Should show:
+# ✅ Backend is running
+# ✅ Share API: Available (or ❌ Missing if not deployed)
+```
+
+### Deployment Script
+
+The `/home/ubuntu/deploy.sh` script should contain:
+
+```bash
+#!/bin/bash
+set -e
+
+echo "🚀 Starting deployment..."
+cd /home/ubuntu/meal-plan
+
+echo "📥 Pulling latest code..."
+git pull origin main
+
+echo "📦 Installing API dependencies..."
+cd api
+pip install -r requirements.txt --quiet
+
+echo "🔄 Restarting API service..."
+sudo systemctl restart meal-plan-api
+
+echo "✅ Deployment complete!"
+echo "Verify at: http://50.19.129.245:8002/api/health"
+```
