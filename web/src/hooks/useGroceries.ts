@@ -137,11 +137,28 @@ export function useGroceries() {
     }
   }
 
+  const deleteGrocery = async (id: number) => {
+    // Optimistic update
+    setItems(prev => prev.filter(item => item.id !== id))
+
+    try {
+      const headers = await getHeaders()
+      await fetch(`${API}/api/groceries/${id}`, {
+        method: 'DELETE',
+        headers
+      })
+    } catch (e) {
+      console.warn('Failed to delete grocery:', e)
+      loadGroceries() // rollback
+    }
+  }
+
   return {
     items,
     loading,
     addGrocery,
     toggleGrocery,
+    deleteGrocery,
     clearBought,
     syncGroceries
   }

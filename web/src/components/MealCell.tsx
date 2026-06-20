@@ -9,6 +9,14 @@ type Props = {
   onUpdate: (patch: Partial<Slot>) => void
   isPending: boolean
   onCopyToTomorrow?: () => void
+  showLock?: boolean
+  isLocked?: boolean
+  onToggleLock?: () => void
+  onDragStart?: () => void
+  onDragEnd?: () => void
+  onDrop?: () => void
+  isDragging?: boolean
+  isDropTarget?: boolean
 }
 
 // Separate component for food selection dropdown with "Add new" functionality
@@ -114,7 +122,21 @@ function FoodSelect({
   )
 }
 
-export function MealCell({ slot, onUpdate, isPending, onCopyToTomorrow }: Props) {
+const API = import.meta.env.VITE_API_URL || ''
+
+const getHouseholdId = (): string | null => {
+  return localStorage.getItem('fridgeplan.householdId')
+}
+
+const getHeaders = async () => {
+  const householdId = getHouseholdId()
+  return {
+    'Content-Type': 'application/json',
+    'X-Household-ID': householdId || ''
+  }
+}
+
+export function MealCell({ slot, onUpdate, isPending, onCopyToTomorrow, showLock, isLocked, onToggleLock, onDragStart, onDragEnd, onDrop, isDragging, isDropTarget }: Props) {
   const [editing, setEditing] = useState(false)
   const [entryMode, setEntryMode] = useState<'simple' | 'detailed'>('simple')
   const [mealName, setMealName] = useState(slot.text || '')
@@ -124,6 +146,22 @@ export function MealCell({ slot, onUpdate, isPending, onCopyToTomorrow }: Props)
 
   const { t } = useTranslation()
   const { proteins, veggies, carbs, fats, addProtein, addVeggie, addCarb, addFat } = useFoodOptionsContext()
+
+  const addToGroceryList = async (ingredientName: string) => {
+    if (!ingredientName.trim()) return
+    try {
+      const headers = await getHeaders()
+      await fetch(`${API}/api/groceries`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({ name: ingredientName.trim(), store: 'Other' })
+      })
+      // Dispatch event to refresh grocery list
+      window.dispatchEvent(new Event('fridgeplan.groceriesChanged'))
+    } catch (e) {
+      console.warn('Failed to add to grocery list:', e)
+    }
+  }
 
   const containerRef = useRef<HTMLDivElement>(null)
 
@@ -336,8 +374,71 @@ export function MealCell({ slot, onUpdate, isPending, onCopyToTomorrow }: Props)
 
   const hasContent = slot.protein || slot.veggie || slot.carb_or_fat || slot.text
 
+  const cycleMealType = (e: React.MouseEvent) => {
+    e.stopPropagation()
+    const types: Array<'regular' | 'smoothie' | 'cheat'> = ['regular', 'smoothie', 'cheat']
+    const currentIndex = types.indexOf(slot.meal_type || 'regular')
+    const nextType = types[(currentIndex + 1) % types.length]
+    onUpdate({ meal_type: nextType })
+  }
+
+  const getMealTypeDisplay = () => {
+    if (!slot.meal_type || slot.meal_type === 'regular') return null
+    if (slot.meal_type === 'smoothie') return { emoji: '🥤', label: 'Smoothie', color: 'bg-purple-100 text-purple-700 border-purple-300' }
+    if (slot.meal_type === 'cheat') return { emoji: '🍰', label: 'Cheat', color: 'bg-pink-100 text-pink-700 border-pink-300' }
+    return null
+  }
+
+  const mealTypeDisplay = getMealTypeDisplay()
+
   return (
-    <div className="relative group">
+    <div
+      className={`relative group ${isDragging ? 'opacity-50' : ''} ${isDropTarget ? 'ring-2 ring-amber-500' : ''}`}
+      draggable={!!(hasContent && !editing)}
+      onDragStart={(e) => {
+        if (onDragStart) {
+          e.dataTransfer.effectAllowed = 'copyMove'
+          onDragStart()
+        }
+      }}
+      onDragEnd={onDragEnd}
+      onDragOver={(e) => {
+        e.preventDefault()
+        e.dataTransfer.dropEffect = 'copy'
+      }}
+      onDrop={(e) => {
+        e.preventDefault()
+        if (onDrop) onDrop()
+      }}
+    >
+      {/* Drag Handle */}
+      {hasContent && !editing && (
+        <div className="absolute top-1 right-1 z-10 opacity-0 group-hover:opacity-100 cursor-move">
+          <svg className="w-4 h-4 text-stone-400" fill="currentColor" viewBox="0 0 16 16">
+            <path d="M7 2a1 1 0 1 1-2 0 1 1 0 0 1 2 0zm3 0a1 1 0 1 1-2 0 1 1 0 0 1 2 0zM7 5a1 1 0 1 1-2 0 1 1 0 0 1 2 0zm3 0a1 1 0 1 1-2 0 1 1 0 0 1 2 0zM7 8a1 1 0 1 1-2 0 1 1 0 0 1 2 0zm3 0a1 1 0 1 1-2 0 1 1 0 0 1 2 0zm-3 3a1 1 0 1 1-2 0 1 1 0 0 1 2 0zm3 0a1 1 0 1 1-2 0 1 1 0 0 1 2 0zm-3 3a1 1 0 1 1-2 0 1 1 0 0 1 2 0zm3 0a1 1 0 1 1-2 0 1 1 0 0 1 2 0z"/>
+          </svg>
+        </div>
+      )}
+      {/* Meal Type Indicator */}
+      {mealTypeDisplay && (
+        <button
+          onClick={cycleMealType}
+          className={`absolute top-1 left-1 z-10 px-2 py-0.5 rounded-full text-[10px] font-semibold border ${mealTypeDisplay.color} hover:scale-110 transition-transform shadow-sm`}
+          title={`Click to change (currently: ${mealTypeDisplay.label})`}
+        >
+          {mealTypeDisplay.emoji} {mealTypeDisplay.label}
+        </button>
+      )}
+      {/* Meal Type Selector (when no type set or hovering) */}
+      {!mealTypeDisplay && hasContent && (
+        <button
+          onClick={cycleMealType}
+          className="absolute top-1 left-1 z-10 opacity-0 group-hover:opacity-100 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-stone-100 hover:bg-stone-200 text-stone-600 border border-stone-200 transition-all"
+          title="Set meal type (Smoothie/Cheat)"
+        >
+          + Type
+        </button>
+      )}
       <button
         onClick={() => setEditing(true)}
         className={`w-full min-h-[100px] sm:min-h-[100px] p-3 sm:p-3 text-left hover:bg-amber-50 active:bg-amber-100 transition-colors touch-manipulation ${
@@ -355,21 +456,54 @@ export function MealCell({ slot, onUpdate, isPending, onCopyToTomorrow }: Props)
 
             {/* Show detailed breakdown if available */}
             {slot.protein && (
-              <div className="text-xs">
-                <span className="text-stone-500 dark:text-stone-400 font-medium">{t('meal.protein')}:</span>{' '}
-                <span className="handwritten">{slot.protein}</span>
+              <div className="text-xs flex items-baseline gap-1 overflow-hidden group/ingredient">
+                <span className="text-stone-500 dark:text-stone-400 font-medium text-[10px] flex-shrink-0">{t('meal.protein')}:</span>
+                <span className="handwritten truncate flex-1">{slot.protein}</span>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    addToGroceryList(slot.protein)
+                  }}
+                  className="opacity-0 group-hover/ingredient:opacity-100 flex-shrink-0 w-4 h-4 rounded-full bg-amber-500 hover:bg-amber-600 text-white flex items-center justify-center text-[10px] transition-opacity"
+                  title="Add to grocery list"
+                  aria-label="Add to grocery list"
+                >
+                  +
+                </button>
               </div>
             )}
             {slot.veggie && (
-              <div className="text-xs">
-                <span className="text-stone-500 dark:text-stone-400 font-medium">{t('meal.veggie')}:</span>{' '}
-                <span className="handwritten">{slot.veggie}</span>
+              <div className="text-xs flex items-baseline gap-1 overflow-hidden group/ingredient">
+                <span className="text-stone-500 dark:text-stone-400 font-medium text-[10px] flex-shrink-0">{t('meal.veggie')}:</span>
+                <span className="handwritten truncate flex-1">{slot.veggie}</span>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    addToGroceryList(slot.veggie)
+                  }}
+                  className="opacity-0 group-hover/ingredient:opacity-100 flex-shrink-0 w-4 h-4 rounded-full bg-amber-500 hover:bg-amber-600 text-white flex items-center justify-center text-[10px] transition-opacity"
+                  title="Add to grocery list"
+                  aria-label="Add to grocery list"
+                >
+                  +
+                </button>
               </div>
             )}
             {slot.carb_or_fat && (
-              <div className="text-xs">
-                <span className="text-stone-500 dark:text-stone-400 font-medium">{isDinner ? t('meal.fat') : t('meal.carb')}:</span>{' '}
-                <span className="handwritten">{slot.carb_or_fat}</span>
+              <div className="text-xs flex items-baseline gap-1 overflow-hidden group/ingredient">
+                <span className="text-stone-500 dark:text-stone-400 font-medium text-[10px] flex-shrink-0">{isDinner ? t('meal.fat') : t('meal.carb')}:</span>
+                <span className="handwritten truncate flex-1">{slot.carb_or_fat}</span>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    addToGroceryList(slot.carb_or_fat)
+                  }}
+                  className="opacity-0 group-hover/ingredient:opacity-100 flex-shrink-0 w-4 h-4 rounded-full bg-amber-500 hover:bg-amber-600 text-white flex items-center justify-center text-[10px] transition-opacity"
+                  title="Add to grocery list"
+                  aria-label="Add to grocery list"
+                >
+                  +
+                </button>
               </div>
             )}
           </div>
@@ -433,6 +567,32 @@ export function MealCell({ slot, onUpdate, isPending, onCopyToTomorrow }: Props)
           className="absolute top-1.5 left-1.5 w-2 h-2 rounded-full bg-amber-400"
           aria-hidden="true"
         />
+      )}
+      {/* Lock Icon for Randomizer */}
+      {showLock && onToggleLock && (
+        <button
+          onClick={(e) => {
+            e.stopPropagation()
+            onToggleLock()
+          }}
+          className={`absolute bottom-1 left-1 w-6 h-6 flex items-center justify-center rounded transition-all ${
+            isLocked
+              ? 'bg-purple-100 border-2 border-purple-500 text-purple-700'
+              : 'bg-white/80 border border-stone-200 text-stone-400 hover:border-purple-300 hover:text-purple-500'
+          }`}
+          title={isLocked ? 'Locked (won\'t randomize)' : 'Unlocked (will randomize)'}
+          aria-label={isLocked ? 'Unlock meal' : 'Lock meal'}
+        >
+          {isLocked ? (
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+            </svg>
+          ) : (
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 11V7a4 4 0 118 0m-4 8v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2z" />
+            </svg>
+          )}
+        </button>
       )}
     </div>
   )

@@ -4,7 +4,7 @@ import { useGroceries, GroceryItem } from '../hooks/useGroceries'
 const STORES = ['Costco', 'Central Market', 'Trader Joes', 'Tom Thumb', 'Whole Foods', 'Target', 'La Michocana', 'Other']
 
 export function GroceryView() {
-  const { items, loading, addGrocery, toggleGrocery, clearBought, syncGroceries } = useGroceries()
+  const { items, loading, addGrocery, toggleGrocery, deleteGrocery, clearBought, syncGroceries } = useGroceries()
   const [newItemName, setNewItemName] = useState('')
   const [selectedStore, setSelectedStore] = useState('Other')
 
@@ -70,33 +70,47 @@ export function GroceryView() {
               </h3>
               <div className="bg-white border border-stone-100 rounded-2xl shadow-sm divide-y divide-stone-50 overflow-hidden">
                 {storeItems.map(item => (
-                  <button
+                  <div
                     key={item.id}
-                    onClick={() => toggleGrocery(item.id, !item.bought)}
-                    className="w-full flex items-center gap-4 px-5 py-4 hover:bg-stone-50 transition-colors text-left group"
+                    className="flex items-center gap-2 px-5 py-4 hover:bg-stone-50 transition-colors group"
                   >
-                    <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all ${
-                      item.bought 
-                        ? 'bg-emerald-500 border-emerald-500' 
-                        : 'border-stone-200 group-hover:border-stone-300'
-                    }`}>
-                      {item.bought && (
-                        <svg className="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
-                        </svg>
-                      )}
-                    </div>
-                    <span className={`text-lg transition-all ${
-                      item.bought ? 'text-stone-300 line-through' : 'text-stone-700'
-                    }`}>
-                      {item.name}
-                    </span>
-                    {item.is_derived && (
-                      <span className="ml-auto text-[10px] font-bold text-stone-300 uppercase tracking-tighter bg-stone-50 px-1.5 py-0.5 rounded">
-                        From Plan
+                    <button
+                      onClick={() => toggleGrocery(item.id, !item.bought)}
+                      className="flex-1 flex items-center gap-4 text-left"
+                    >
+                      <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all ${
+                        item.bought
+                          ? 'bg-emerald-500 border-emerald-500'
+                          : 'border-stone-200 group-hover:border-stone-300'
+                      }`}>
+                        {item.bought && (
+                          <svg className="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                          </svg>
+                        )}
+                      </div>
+                      <span className={`text-lg transition-all ${
+                        item.bought ? 'text-stone-300 line-through' : 'text-stone-700'
+                      }`}>
+                        {item.name}
                       </span>
-                    )}
-                  </button>
+                      {item.is_derived && (
+                        <span className="ml-auto text-[10px] font-bold text-stone-300 uppercase tracking-tighter bg-stone-50 px-1.5 py-0.5 rounded">
+                          From Plan
+                        </span>
+                      )}
+                    </button>
+                    <button
+                      onClick={() => deleteGrocery(item.id)}
+                      className="opacity-0 group-hover:opacity-100 p-2 text-red-500 hover:text-red-700 hover:bg-red-50 rounded-lg transition-all"
+                      aria-label="Delete item"
+                      title="Delete item"
+                    >
+                      <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                      </svg>
+                    </button>
+                  </div>
                 ))}
               </div>
             </section>

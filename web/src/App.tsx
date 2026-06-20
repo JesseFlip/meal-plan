@@ -10,6 +10,7 @@ import { InstallPrompt } from './components/InstallPrompt'
 import { LanguageSwitcher } from './components/LanguageSwitcher'
 import { ColorPicker } from './components/ColorPicker'
 import { NightModeToggle } from './components/NightModeToggle'
+import { ReportIssueButton } from './components/ReportIssueButton'
 import { FoodOptionsProvider } from './contexts/FoodOptionsContext'
 import { LanguageProvider } from './contexts/LanguageContext'
 
@@ -90,6 +91,7 @@ function AppContent() {
               </div>
               <div className="flex items-center gap-3">
                 {currentView === 'plan' && <ShareButton weekStartDate={selectedWeek} />}
+                <ReportIssueButton />
                 <ColorPicker />
                 <NightModeToggle nightMode={nightMode} onToggle={updateNightMode} />
                 <LanguageSwitcher />

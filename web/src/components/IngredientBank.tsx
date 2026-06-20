@@ -62,6 +62,89 @@ const NUTRITION_FRAMEWORK_2_0 = {
   ]
 }
 
+// Vegetarian Template with Cheese & Milk
+const VEGETARIAN_DAIRY = {
+  proteins: [
+    'Whole Eggs',
+    'Egg Whites',
+    'Greek Yogurt',
+    'Cottage Cheese',
+    'Milk (Whole)',
+    'Milk (2%)',
+    'Milk (Skim)',
+    'Mozzarella Cheese',
+    'Cheddar Cheese',
+    'Feta Cheese',
+    'Parmesan Cheese',
+    'Ricotta Cheese',
+    'Goat Cheese',
+    'Whey Protein',
+    'Casein Protein',
+    'Edamame',
+    'Tofu',
+    'Tempeh',
+    'Black Beans',
+    'Chickpeas',
+    'Lentils'
+  ],
+  veggies: [
+    'Spinach',
+    'Kale',
+    'Broccoli',
+    'Cauliflower',
+    'Brussels Sprouts',
+    'Asparagus',
+    'Green Beans',
+    'Zucchini',
+    'Bell Peppers',
+    'Carrots',
+    'Cherry Tomatoes',
+    'Cucumbers',
+    'Mixed Greens',
+    'Arugula',
+    'Cabbage',
+    'Mushrooms',
+    'Snap Peas',
+    'Eggplant',
+    'Squash',
+    'Beets'
+  ],
+  carbs: [
+    'Sweet Potatoes',
+    'Oats',
+    'Quinoa',
+    'Brown Rice',
+    'Jasmine Rice',
+    'Whole Wheat Bread',
+    'Ezekiel Bread',
+    'Sourdough Bread',
+    'Whole Wheat Pasta',
+    'Banana',
+    'Apple',
+    'Berries',
+    'Rice Cakes',
+    'Cream of Rice',
+    'Barley',
+    'Farro'
+  ],
+  fats: [
+    'Avocado',
+    'Olive Oil',
+    'Almonds',
+    'Walnuts',
+    'Cashews',
+    'Pecans',
+    'Sunflower Seeds',
+    'Pumpkin Seeds',
+    'Chia Seeds',
+    'Flax Seeds',
+    'Almond Butter',
+    'Peanut Butter',
+    'Tahini',
+    'Coconut Oil'
+  ]
+}
+
 function IngredientCategory({
   title,
   items,
@@ -172,6 +255,11 @@ export function IngredientBank() {
       await loadTemplate(NUTRITION_FRAMEWORK_2_0)
       setIsLoading(false)
       setSelectedTemplate('')
+    } else if (selectedTemplate === 'vegetarian-dairy') {
+      setIsLoading(true)
+      await loadTemplate(VEGETARIAN_DAIRY)
+      setIsLoading(false)
+      setSelectedTemplate('')
     }
   }
 
@@ -211,6 +299,7 @@ export function IngredientBank() {
             >
               <option value="">{t('ingredients.template.none')}</option>
               <option value="nutrition-framework-2.0">{t('ingredients.template.nutritionFramework')}</option>
+              <option value="vegetarian-dairy">Vegetarian with Dairy & Cheese</option>
             </select>
           </div>
 
@@ -243,6 +332,11 @@ export function IngredientBank() {
           {selectedTemplate === 'nutrition-framework-2.0' && (
             <span className="ml-2">
               • High-Performance & Adherence framework with 40+ optimized foods
+            </span>
+          )}
+          {selectedTemplate === 'vegetarian-dairy' && (
+            <span className="ml-2">
+              • Vegetarian template with dairy, eggs, cheese, and plant-based proteins (60+ foods)
             </span>
           )}
         </p>

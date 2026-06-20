@@ -87,6 +87,7 @@ class MealSlot(SQLModel, table=True):
     person: Optional[str] = None  # None=both, "jesse", "dorys"
     state: str = "planned"  # planned | fasting | skipped | eaten
     rating: str = ""  # empty | good | bad - for meal feedback
+    meal_type: str = "regular"  # regular | smoothie | cheat
     updated_at: datetime = Field(default_factory=datetime.utcnow)
 
 
@@ -981,6 +982,24 @@ def toggle_grocery(
         session.commit()
         session.refresh(item)
         return grocery_to_dict(item)
+
+
+@app.delete("/api/groceries/{item_id}")
+def delete_grocery(
+    item_id: int,
+    household_id: str = Header(None, alias="X-Household-ID"),
+):
+    """Delete a specific grocery item."""
+    hh_id = get_household_id(household_id)
+
+    with Session(engine) as session:
+        item = session.get(GroceryItem, item_id)
+        if not item or item.household_id != hh_id:
+            raise HTTPException(404, "Item not found")
+
+        session.delete(item)
+        session.commit()
+        return {"ok": True, "deleted_id": item_id}
 
 
 @app.post("/api/groceries/clear")

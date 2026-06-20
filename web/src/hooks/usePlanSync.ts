@@ -12,11 +12,31 @@ export type Slot = {
   person: string | null
   state: 'planned' | 'fasting' | 'skipped' | 'eaten'
   rating: '' | 'good' | 'bad'
+  meal_type: 'regular' | 'smoothie' | 'cheat'
   updated_at: string
 }
 
 const API = import.meta.env.VITE_API_URL || ''
-const WS_URL = import.meta.env.VITE_WS_URL || '/ws'
+
+// Derive WebSocket URL from API URL if not explicitly set
+const getWebSocketUrl = (): string => {
+  if (import.meta.env.VITE_WS_URL) {
+    return import.meta.env.VITE_WS_URL
+  }
+
+  // If API URL is set, derive WS URL from it
+  if (API) {
+    const url = new URL(API)
+    // Convert http(s) to ws(s)
+    const wsProtocol = url.protocol === 'https:' ? 'wss:' : 'ws:'
+    return `${wsProtocol}//${url.host}/ws`
+  }
+
+  // Fallback to relative WebSocket URL (same domain)
+  return `${window.location.protocol === 'https:' ? 'wss:' : 'ws:'}//${window.location.host}/ws`
+}
+
+const WS_URL = getWebSocketUrl()
 
 // Household ID management
 const getHouseholdId = (): string | null => {
