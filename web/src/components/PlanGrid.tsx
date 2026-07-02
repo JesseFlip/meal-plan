@@ -225,7 +225,7 @@ export function PlanGrid({ slots, onUpdate, pendingSlotIds }: Props) {
                 {slotName}
               </span>
             </div>
-            <div className="flex-1 flex">
+            <div className="flex-1 flex min-w-0">
               {DAYS.map((_, dayIdx) => {
                 const slot = getSlot(dayIdx, slotIdx)
                 return (

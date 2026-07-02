@@ -11,6 +11,7 @@ import { LanguageSwitcher } from './components/LanguageSwitcher'
 import { ColorPicker } from './components/ColorPicker'
 import { NightModeToggle } from './components/NightModeToggle'
 import { ReportIssueButton } from './components/ReportIssueButton'
+import { FamilyShareModal } from './components/FamilyShareModal'
 import { FoodOptionsProvider } from './contexts/FoodOptionsContext'
 import { LanguageProvider } from './contexts/LanguageContext'
 
@@ -31,6 +32,7 @@ type View = 'plan' | 'groceries' | 'ingredients'
 
 function AppContent() {
   const [currentView, setCurrentView] = useState<View>('plan')
+  const [showFamilyShare, setShowFamilyShare] = useState(false)
   const { t } = useTranslation()
   const { handwritingColor, nightMode, updateNightMode } = useSettings()
 
@@ -68,6 +70,7 @@ function AppContent() {
   return (
     <div className="min-h-screen bg-stone-50 dark:bg-stone-900 transition-colors">
         <InstallPrompt />
+        {showFamilyShare && <FamilyShareModal onClose={() => setShowFamilyShare(false)} />}
         <header className="sticky top-0 z-10 bg-stone-50/95 dark:bg-stone-900/95 backdrop-blur border-b border-stone-200 dark:border-stone-700">
           <div className="max-w-7xl mx-auto px-3 sm:px-4 py-2 sm:py-3">
             {/* Mobile: Stacked layout */}
@@ -76,6 +79,13 @@ function AppContent() {
                 <h1 className="text-xl font-bold text-stone-900 dark:text-stone-100 tracking-tight">{t('app.title')}</h1>
                 <div className="flex items-center gap-2">
                   {currentView === 'plan' && <ShareButton weekStartDate={selectedWeek} />}
+                  <button
+                    onClick={() => setShowFamilyShare(true)}
+                    className="p-2 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white rounded-lg transition-all shadow"
+                    title="Family Sharing"
+                  >
+                    <span className="text-lg">👨‍👩‍👧‍👦</span>
+                  </button>
                   <NightModeToggle nightMode={nightMode} onToggle={updateNightMode} />
                   <LanguageSwitcher />
                 </div>
@@ -91,6 +101,14 @@ function AppContent() {
               </div>
               <div className="flex items-center gap-3">
                 {currentView === 'plan' && <ShareButton weekStartDate={selectedWeek} />}
+                <button
+                  onClick={() => setShowFamilyShare(true)}
+                  className="px-4 py-2 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white font-semibold rounded-lg transition-all shadow hover:shadow-md flex items-center gap-2"
+                  title="Family Sharing"
+                >
+                  <span className="text-lg">👨‍👩‍👧‍👦</span>
+                  <span className="hidden lg:inline">Family</span>
+                </button>
                 <ReportIssueButton />
                 <ColorPicker />
                 <NightModeToggle nightMode={nightMode} onToggle={updateNightMode} />

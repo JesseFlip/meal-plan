@@ -711,6 +711,44 @@ def update_household_settings(
         return settings_to_dict(settings)
 
 
+@app.get("/api/household")
+def get_household(household_id: str = Header(None, alias="X-Household-ID")):
+    """Get household info (name, created_at)."""
+    hh_id = get_household_id(household_id)
+
+    with Session(engine) as session:
+        household = session.get(Household, hh_id)
+
+        if not household:
+            raise HTTPException(404, "Household not found")
+
+        return household_to_dict(household)
+
+
+@app.patch("/api/household")
+def update_household(
+    payload: dict, household_id: str = Header(None, alias="X-Household-ID")
+):
+    """Update household info (e.g., name)."""
+    hh_id = get_household_id(household_id)
+
+    with Session(engine) as session:
+        household = session.get(Household, hh_id)
+
+        if not household:
+            raise HTTPException(404, "Household not found")
+
+        # Update name if provided
+        if "name" in payload:
+            household.name = payload["name"]
+
+        session.add(household)
+        session.commit()
+        session.refresh(household)
+
+        return household_to_dict(household)
+
+
 @app.get("/api/plan")
 def get_plan(
     week: Optional[str] = None, household_id: str = Header(None, alias="X-Household-ID")
