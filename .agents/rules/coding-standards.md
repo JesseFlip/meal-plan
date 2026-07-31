@@ -73,7 +73,7 @@ Universal rules first; per-language below.
 
 ## Anti-patterns (do not do these)
 
-- Don't write a Dockerfile unless a spec asks for one. Railway and Netlify don't need them.
+- Don't write a Dockerfile unless a spec asks for one. Render and Netlify don't need them.
 - Don't add Storybook. UI is small enough that the app itself is the testbed.
 - Don't introduce a monorepo tool (Turborepo, Nx, pnpm workspaces). Two folders, two `package.json`s, fine.
 - Don't write a custom logger. Use Python's `logging` module and console.log. Structured logging when a spec demands it.

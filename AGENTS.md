@@ -13,7 +13,7 @@ This is **not** a generic meal-planning SaaS, diet app, or calorie tracker. It's
 - **Backend**: Python 3.12, FastAPI, SQLModel, SQLite (dev) / Postgres (prod)
 - **Frontend**: Vite 5, React 18, TypeScript, Tailwind 3, `vite-plugin-pwa`
 - **Real-time**: native WebSockets (no Socket.IO, no Pusher, no third-party SaaS)
-- **Hosting**: Railway (backend), Netlify (frontend)
+- **Hosting**: Render free plan (backend), Neon free Postgres (database), Netlify (frontend)
 - **CI**: GitHub Actions
 - **Auth**: none in MVP — relies on private deployment. Do not add auth without an approved spec.
 

@@ -22,7 +22,7 @@ One paragraph describing the technical strategy. How this fits into the existing
 
 - New table? Modified column? Migration needed?
 - Backwards compatibility plan: can old clients still read the response?
-- If migrating: how does the migration run on Railway (alembic step in start command)?
+- If migrating: how does the migration run on Render (alembic step in start command)?
 
 ## API changes
 

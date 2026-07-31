@@ -2,11 +2,14 @@
 
 ## Hosting (fixed)
 
-- **Backend**: Railway. Service `fridgeplan-api`. Postgres add-on attached.
+- **Backend**: Render (free plan). Service `fridgeplan-api`, configured via `render.yaml` at repo root.
+- **Database**: Neon (free Postgres). Connection string set as `DATABASE_URL` on Render.
 - **Frontend**: Netlify. Site `fridgeplan-web`. Builds from the `web/` subdirectory.
-- **Domain**: TBD (Jesse will configure). Until then, use the default `*.railway.app` and `*.netlify.app` URLs.
+- **Domain**: TBD (Jesse will configure). Until then, use the default `*.onrender.com` and `*.netlify.app` URLs.
 
 Both platforms auto-deploy on push to `main`. Do not introduce a manual deploy step. Do not introduce a third hosting provider without a spec.
+
+Previously ran on Railway, then a paid EC2 instance — both retired in favor of this free Render + Neon setup (see DEPLOYMENT.md for history and rationale).
 
 ## Branch strategy
 
@@ -37,20 +40,19 @@ GitHub Actions runs on every PR and every push to `main`:
 
 | Variable | Where | Purpose |
 |---|---|---|
-| `DATABASE_URL` | Railway (auto-injected by Postgres plugin) | Postgres connection string |
-| `CORS_ORIGINS` | Railway | Comma-separated allowed origins (Netlify URL) |
-| `VITE_API_URL` | Netlify | Backend base URL (e.g. `https://fridgeplan-api.railway.app`) |
-| `VITE_WS_URL` | Netlify | WebSocket URL (e.g. `wss://fridgeplan-api.railway.app/ws`) |
+| `DATABASE_URL` | Render (set manually to the Neon connection string) | Postgres connection string |
+| `ALLOWED_ORIGINS` | Render | Comma-separated allowed origins (Netlify URL) |
+| `VITE_API_URL` | Netlify | Backend base URL (e.g. `https://fridgeplan-api.onrender.com`) |
+| `VITE_WS_URL` | Netlify | WebSocket URL (e.g. `wss://fridgeplan-api.onrender.com/ws`) |
 
 Never hardcode any of these. Never commit `.env` files.
 
 Local dev defaults are baked into the code (`http://localhost:8000`, `ws://localhost:8000/ws`). Production values come from the platform environment.
 
-## Backend deploy specifics (Railway)
+## Backend deploy specifics (Render)
 
-- Railway detects FastAPI and runs `uvicorn main:app --host 0.0.0.0 --port $PORT` automatically.
-- `railway.json` in repo root pins the deploy command and watch path.
-- Postgres add-on must be attached. SQLite is dev-only.
+- `render.yaml` in repo root is the Blueprint Render reads to configure the service (root dir `api/`, free plan, health check `/api/health`).
+- Render's free plan has **no persistent disk** and **sleeps after 15 min idle** (cold start ~30-50s on the next request). Neon Postgres (not SQLite) is required in production so data survives restarts.
 - On schema changes, run Alembic migrations as part of the start command (e.g., `alembic upgrade head && uvicorn ...`). The agent must add this when introducing the first migration.
 
 ## Frontend deploy specifics (Netlify)
@@ -70,13 +72,13 @@ Until the first schema change, `SQLModel.metadata.create_all(engine)` in the lif
 1. Add **Alembic** (`alembic init alembic` in `api/`)
 2. Generate the migration (`alembic revision --autogenerate -m "<message>"`)
 3. Commit the migration file
-4. Update Railway start command to run `alembic upgrade head` before `uvicorn`
+4. Update the Render start command (in `render.yaml`) to run `alembic upgrade head` before `uvicorn`
 
 Do not rely on auto-table-creation in production once Alembic is introduced.
 
 ## Rollback
 
-- Railway: redeploy a previous deployment from the dashboard (one click).
+- Render: redeploy a previous deployment from the dashboard (one click).
 - Netlify: "Publish deploy" on any previous build.
 - Both are fast (<60s). Do not panic-revert via git unless the bad commit is on `main` and breaking new contributors.
 
@@ -92,6 +94,6 @@ Before any PR is merged to `main`:
 
 - [ ] CI green
 - [ ] Netlify PR preview opens, loads, and the new feature works
-- [ ] If backend changes: API endpoints tested via Railway PR environment OR locally with `curl`
-- [ ] No new env vars added without documenting them in this file and setting them in Railway/Netlify
+- [ ] If backend changes: API endpoints tested locally with `curl` (Render free plan has no PR preview environments)
+- [ ] No new env vars added without documenting them in this file and setting them in Render/Netlify
 - [ ] `spec.md` for this feature reflects what was actually built

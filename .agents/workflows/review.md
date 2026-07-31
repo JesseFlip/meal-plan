@@ -104,7 +104,7 @@ When the user confirms the PR is merged:
 1. Switch back to `main` and pull.
 2. Delete the local feature branch.
 3. Delete the remote feature branch.
-4. Verify Netlify and Railway deploys went green.
+4. Verify Netlify and Render deploys went green.
 5. Report: "Feature live at <URL>. Ready for next `/specify`."
 
 ## Anti-patterns

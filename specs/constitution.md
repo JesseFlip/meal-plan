@@ -43,7 +43,7 @@ Changing any of these requires a constitutional-amendment spec, not a normal fea
 - **Frontend**: Vite + React + TypeScript + Tailwind
 - **PWA tooling**: `vite-plugin-pwa`
 - **Real-time sync**: native WebSockets, no third-party real-time SaaS
-- **Hosting**: Railway (backend), Netlify (frontend), GitHub (source + CI)
+- **Hosting**: Render free plan (backend), Neon free Postgres (database), Netlify (frontend), GitHub (source + CI)
 - **CI**: GitHub Actions
 - **No monorepo tooling** (Turborepo, Nx, pnpm workspaces). Two folders, two `package.json`s.
 

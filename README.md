@@ -65,7 +65,7 @@ A full-stack, real-time meal planning web app built for households who want to e
 | **State / Data** | Fetch API + WebSocket for real-time sync |
 | **Backend** | FastAPI (Python) |
 | **Database** | PostgreSQL |
-| **Deployment** | Netlify (frontend + serverless API proxy) |
+| **Deployment** | Netlify (frontend), Render (backend), Neon (Postgres) |
 | **PWA** | Workbox (via `vite-plugin-pwa`) |
 | **i18n** | Custom translation key system (EN / ES) |
 | **AI** | AI meal generation endpoint |

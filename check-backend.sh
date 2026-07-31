@@ -1,10 +1,13 @@
 #!/bin/bash
-# Quick script to check backend status and deploy if needed
+# Quick script to check backend status
+#
+# Usage: ./check-backend.sh [API_URL]
+# Defaults to $API_URL env var, then https://fridgeplan-api.onrender.com
+# (rename to match your actual Render service URL).
 
-EC2_HOST="50.19.129.245"
-API_URL="http://${EC2_HOST}:8002"
+API_URL="${1:-${API_URL:-https://fridgeplan-api.onrender.com}}"
 
-echo "🔍 Checking backend health..."
+echo "🔍 Checking backend health at ${API_URL}..."
 echo ""
 
 # Check health endpoint
@@ -15,6 +18,7 @@ if echo "$HEALTH" | grep -q "ok"; then
     echo "$HEALTH" | jq . 2>/dev/null || echo "$HEALTH"
 else
     echo "❌ Backend is not responding"
+    echo "   (Render free tier sleeps after 15 min idle — first request can take ~30-50s to wake it)"
 fi
 
 echo ""
@@ -40,6 +44,6 @@ echo "   Backend URL: ${API_URL}"
 echo "   Health: $(echo $HEALTH | grep -q ok && echo '✅ OK' || echo '❌ DOWN')"
 echo "   Share API: $([ "$SHARE_CHECK" != "404" ] && echo '✅ Available' || echo '❌ Missing')"
 echo ""
-echo "💡 If share API is missing, check:"
-echo "   1. GitHub Actions: https://github.com/JesseFlip/meal-plan/actions"
-echo "   2. Or deploy manually with: ssh ubuntu@${EC2_HOST} '/home/ubuntu/deploy.sh'"
+echo "💡 If the backend is down or missing endpoints, check:"
+echo "   1. Render dashboard → fridgeplan-api → Logs"
+echo "   2. GitHub Actions CI: https://github.com/JesseFlip/meal-plan/actions"

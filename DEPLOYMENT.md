@@ -1,8 +1,8 @@
 # Deployment Guide
 
-> **NOTE**: The original Railway deployment is documented below. The project is currently running on **EC2** at `50.19.129.245:8002`. See [EC2 Deployment](#ec2-deployment-current) for the current setup.
+> **NOTE**: This project has moved through three backends: Railway → a paid EC2 instance → **Render (free) + Neon (free Postgres)**, the current setup. EC2 was retired because it cost real money for a low-traffic household app; Render + Neon covers the same needs at $0/month. See [Retired: EC2 & Railway](#retired-ec2--railway) for history.
 
-End-to-end setup so merges to `main` auto-deploy to a live URL. Three accounts, ~30 minutes the first time, ~0 minutes after.
+End-to-end setup so merges to `main` auto-deploy to a live URL. Three accounts, ~30 minutes the first time, ~0 minutes after. All free.
 
 ## TL;DR architecture
 
@@ -13,21 +13,24 @@ End-to-end setup so merges to `main` auto-deploy to a live URL. Three accounts, 
                        │                  │
         ┌──────────────┘                  └──────────────┐
         ▼                                                ▼
-   ┌─────────────┐                              ┌─────────────────┐
-   │  Railway    │                              │  Netlify        │
-   │  (backend)  │                              │  (PWA frontend) │
-   │             │                              │                 │
-   │  FastAPI    │  ◄──── HTTPS + WSS ────►    │  React + Vite   │
-   │  Postgres   │                              │  Service Worker │
-   └─────────────┘                              └─────────────────┘
-        ▲                                                ▲
-        │                                                │
-        └──────────── Phone, Tablet, Laptop ────────────┘
-                       (all via Netlify URL)
+   ┌───────────────┐    ┌──────────┐         ┌─────────────────┐
+   │  Render (free)│◄──►│  Neon    │         │  Netlify        │
+   │  FastAPI      │    │  Postgres│         │  (PWA frontend) │
+   │  backend      │    │  (free)  │         │  React + Vite   │
+   └───────┬───────┘    └──────────┘         │  Service Worker │
+           │                                  └────────┬────────┘
+           └──────────── HTTPS + WSS ───────────────────┘
+                            ▲
+                            │
+           ┌────────────────┴────────────────┐
+           │   Phone, Tablet, Laptop          │
+           │   (all via the Netlify URL)      │
+           └───────────────────────────────────┘
 ```
 
 - **GitHub**: source of truth. CI runs on every PR.
-- **Railway**: builds the API on every push to `main`, runs Uvicorn behind a managed HTTPS endpoint, gives you a managed Postgres database.
+- **Render**: builds the API on every push to `main` (via `render.yaml`), runs Uvicorn behind a managed HTTPS endpoint. Free plan — sleeps after 15 min idle, wakes on the next request (~30-50s cold start).
+- **Neon**: managed serverless Postgres, free tier. Compute auto-suspends after 5 min idle, resumes in ~1s on the next query. Backend data lives here, not on Render (Render's free plan has no persistent disk).
 - **Netlify**: builds the PWA on every push to `main`, serves from a global CDN, runs the service worker for offline support.
 - **PR previews**: Netlify spins up a unique preview URL for every PR — share with Dorys before merging.
 
@@ -55,21 +58,32 @@ gh repo create JesseFlip/fridgeplan --private --source=. --push
 
 ---
 
-## Step 2 — Deploy the backend to Railway (10 min)
+## Step 2 — Deploy the backend to Render + Neon (10 min)
 
-1. Sign up / log in at https://railway.app
-2. **New Project** → **Deploy from GitHub repo** → select `fridgeplan`
-3. Railway detects `railway.json` and configures the build automatically. Wait for the first deploy to finish (~2 min).
-4. **Add Postgres**: in the project, click **+ New** → **Database** → **PostgreSQL**. Railway provisions it and exposes `DATABASE_URL` automatically to your FastAPI service. No manual wiring.
-5. **Configure environment variables** on the API service:
-   - `CORS_ORIGINS` = `https://fridgeplan.netlify.app` (replace once you know the Netlify URL — Step 3)
-6. **Get the public URL**: in the API service settings, click **Generate Domain**. You'll get something like `fridgeplan-api-production.up.railway.app`. Save this — you need it for Step 3.
-7. **Verify**: in a browser, hit `https://YOUR-API-URL/api/health`. Should return `{"ok": true, "ts": "..."}`. Then hit `/api/plan` — should return 21 seeded slots.
+**2a. Database (Neon, free Postgres):**
+
+1. Sign up / log in at https://neon.tech (no credit card required)
+2. **New Project** → name it `fridgeplan` → pick a region close to where you'll deploy Render (e.g. US East / Ohio)
+3. On the project dashboard, copy the **pooled connection string** from **Connection Details** (looks like `postgresql://user:pass@ep-xxx-pooler.region.aws.neon.tech/dbname?sslmode=require`)
+
+**2b. Backend (Render, free web service):**
+
+1. Sign up / log in at https://render.com
+2. **New +** → **Blueprint** → connect GitHub → select `fridgeplan`
+3. Render detects `render.yaml` at the repo root and configures the `fridgeplan-api` service automatically (root dir `api/`, free plan, health check `/api/health`). Click **Apply**.
+4. **Set environment variables** on the service (Environment tab) — `render.yaml` declares these but leaves the values to you:
+   - `DATABASE_URL` = the Neon connection string from step 2a
+   - `ALLOWED_ORIGINS` = `https://fridgeplan.netlify.app` (replace once you know the Netlify URL — Step 3)
+   - `GEMINI_API_KEY` = your key (for AI meal generation)
+5. Save — Render redeploys automatically (~2 min first build).
+6. **Get the public URL**: shown at the top of the service page, something like `fridgeplan-api.onrender.com`. Save this — you need it for Step 3.
+7. **Verify**: `curl https://YOUR-RENDER-URL/api/health`. Should return `{"ok": true, "ts": "..."}`. Then hit `/api/plan` — should return 21 seeded slots. (First hit after idle takes ~30-50s — free plan cold start.)
 
 **Troubleshooting**:
-- If Railway can't find `main.py`: confirm `railway.json` is at the repo root and the `startCommand` includes `cd api &&`.
-- If Postgres connection fails: check that `DATABASE_URL` is set on the API service (Variables tab). Sometimes you need to **Reference** the Postgres `DATABASE_URL` rather than copy it.
-- If WebSocket fails in production but works locally: Railway supports WebSockets natively, but the client must use `wss://` (not `ws://`).
+- If Render can't find `main.py`: confirm `render.yaml` is at the repo root and `rootDir: api` is set.
+- If Postgres connection fails: double check you copied the *pooled* connection string from Neon (not the direct one) and that it includes `?sslmode=require`.
+- If the backend seems to "reset" data periodically: you're still on SQLite. Render's free plan has no persistent disk — `DATABASE_URL` must point at Neon.
+- If WebSocket fails in production but works locally: Render supports WebSockets natively, but the client must use `wss://` (not `ws://`), and the first connection after idle will hang for ~30-50s while the service wakes up.
 
 ---
 
@@ -79,11 +93,11 @@ gh repo create JesseFlip/fridgeplan --private --source=. --push
 2. **Add new site** → **Import an existing project** → **GitHub** → select `fridgeplan`
 3. Netlify detects `netlify.toml`. Base directory `web/`, build command `npm run build`, publish directory `dist/`. Leave these.
 4. **Don't deploy yet** — click "Show advanced" and add environment variables first:
-   - `VITE_API_URL` = `https://YOUR-RAILWAY-URL` (from Step 2)
-   - `VITE_WS_URL` = `wss://YOUR-RAILWAY-URL/ws` (note: `wss`, not `ws`)
+   - `VITE_API_URL` = `https://YOUR-RENDER-URL` (from Step 2)
+   - `VITE_WS_URL` = `wss://YOUR-RENDER-URL/ws` (note: `wss`, not `ws`)
 5. Click **Deploy site**. First build takes ~2 minutes.
 6. Get the public URL: something like `https://fridgeplan-abc123.netlify.app`. You can rename in **Site settings → Change site name** to something cleaner.
-7. **Go back to Railway** and update the `CORS_ORIGINS` env var on the API service to match your Netlify URL exactly. Save → Railway redeploys.
+7. **Go back to Render** and update the `ALLOWED_ORIGINS` env var on the API service to match your Netlify URL exactly. Save → Render redeploys.
 8. **Verify the full loop**:
    - Open the Netlify URL on your laptop
    - Open it again on your phone (or a second browser)
@@ -96,7 +110,7 @@ If the WebSocket doesn't connect in production, open browser DevTools → Networ
 
 ## Step 4 — Configure auto-deploy (already done, but verify)
 
-This part is automatic — both Railway and Netlify watched your repo from Step 2 and 3. To verify:
+This part is automatic — both Render and Netlify watched your repo from Step 2 and 3. To verify:
 
 1. Make a tiny change locally (e.g., edit the page title in `web/index.html`)
 2. Commit and push to a new branch:
@@ -138,33 +152,28 @@ Once the PWA is live at your Netlify URL:
 ## Common operations
 
 ### View backend logs
-```bash
-# Railway CLI (install once: npm i -g @railway/cli)
-railway login
-railway link    # link to your project
-railway logs --service fridgeplan-api
-```
+Render dashboard → `fridgeplan-api` service → **Logs** tab (live-tails automatically).
 
 ### View frontend build logs
 Netlify dashboard → **Deploys** → click the latest deploy → "Deploy log"
 
 ### Rollback a bad deploy
-- **Backend**: Railway → Deployments → click any previous deployment → "Redeploy"
+- **Backend**: Render → service → **Events**/**Deploys** → click any previous deploy → "Redeploy"
 - **Frontend**: Netlify → Deploys → click any previous deploy → "Publish deploy"
-Both take ~30 seconds.
+Both take under a minute.
 
 ### Update environment variables
-- **Railway**: project → service → Variables tab → edit → service redeploys automatically
+- **Render**: service → Environment tab → edit → service redeploys automatically
 - **Netlify**: Site settings → Environment variables → edit → **trigger a new deploy manually** (Netlify doesn't auto-rebuild on env var changes)
 
 ### Connect to the production Postgres
 ```bash
-# From Railway CLI
-railway run psql $DATABASE_URL
-
-# Or copy the connection string from Railway dashboard → Postgres service → Connect → "Postgres Connection URL"
-psql "postgresql://..."
+# Copy the connection string from the Neon dashboard → project → Connection Details
+psql "postgresql://user:pass@ep-xxx-pooler.region.aws.neon.tech/dbname?sslmode=require"
 ```
+
+### Keep Render from sleeping (optional)
+Render's free plan sleeps the service after 15 min idle, adding a ~30-50s cold start to the next request. For a fridge tablet that's rarely idle that long during the day, this is usually a non-issue. If it bothers you, a free uptime pinger (e.g. [UptimeRobot](https://uptimerobot.com), 5-min interval, free tier) hitting `/api/health` keeps it warm — but note this also eats into Render's 750 free instance-hours/month faster (still comfortably enough for one always-on low-traffic service).
 
 ---
 
@@ -172,15 +181,15 @@ psql "postgresql://..."
 
 | Service | Free tier | Likely monthly cost |
 |---|---|---|
-| Railway | $5 of usage credit/month, then pay-as-you-go | **$0–5** for this app (low traffic) |
-| Railway Postgres | Included in usage | Minimal — household DB is tiny |
+| Render | 750 free instance-hours/month, sleeps after 15 min idle | **$0** for this app |
+| Neon Postgres | 0.5GB storage, 100 compute-hours/month, auto-suspends after 5 min idle | **$0** — household DB is tiny |
 | Netlify | 100GB bandwidth, 300 build minutes free | **$0** for this app |
 | GitHub | Free for private repos with Actions (2000 min/mo) | **$0** |
 | Fully Kiosk Browser | $8 one-time | $8 once |
 
-**Realistic ongoing cost: $0–5/month** plus the one-time tablet + Fully Kiosk + mount (~$250 one-time).
+**Realistic ongoing cost: $0/month** (plus the one-time tablet + Fully Kiosk purchase, ~$250 one-time if you haven't already). This is a genuine free tier, not a trial — no credit card required for Render or Neon, and no usage-based billing to accidentally trip.
 
-If Railway usage starts climbing (it won't, but if), check the **Metrics** tab — most likely cause is the API never sleeping. Add a sleep schedule or downgrade to Hobby plan.
+If Render's free instance-hours ever start running low, check the workspace **Usage** page — the likely cause would be multiple services on the same free account, not this one app.
 
 ---
 
@@ -195,9 +204,9 @@ Pro: zero public attack surface, no auth needed.
 Con: your home network has to be up for the fridge to work.
 
 ### Option B: PIN auth on the backend
-Add a simple PIN check middleware to the FastAPI app (one spec, ~30 min of agent work). Store the bcrypt hash in Railway env vars. The PWA prompts for the PIN once and stores a session cookie.
+Add a simple PIN check middleware to the FastAPI app (one spec, ~30 min of agent work). Store the bcrypt hash in Render env vars. The PWA prompts for the PIN once and stores a session cookie.
 
-Pro: keeps Railway hosting, adds basic security.
+Pro: keeps free Render hosting, adds basic security.
 Con: not zero-trust, but enough for a household app.
 
 Both are out of scope for the spike. Do them via spec when you're ready.
@@ -206,143 +215,30 @@ Both are out of scope for the spike. Do them via spec when you're ready.
 
 ## When something breaks
 
-1. Check **Railway logs** for backend errors.
+1. Check **Render logs** for backend errors (service page → Logs tab).
 2. Check **browser DevTools console** for frontend errors.
 3. Check **GitHub Actions** for CI failures (often the first sign something's off).
 4. Check **Netlify build log** for frontend build failures.
+5. If the backend is unreachable, check whether it's just asleep — Render's free plan sleeps after 15 min idle; the first request wakes it (~30-50s).
 
 Most production breakages are one of:
-- Missing env var (CORS, API URL)
+- Missing env var (`ALLOWED_ORIGINS`, `VITE_API_URL`, `DATABASE_URL`)
 - WebSocket protocol mismatch (`ws` vs `wss`)
-- Schema drift between local SQLite and Railway Postgres (add a migration)
+- Schema drift between local SQLite and Neon Postgres (add a migration)
 - Service worker stuck on an old cache (bump the SW version in `vite.config.ts` or hit Fully Kiosk's "clear cache")
 
 If you can't fix it in 15 minutes, roll back the last deploy and open a spec for the proper fix.
 
 ---
 
-## EC2 Deployment (Current)
+## Retired: EC2 & Railway
 
-The backend is currently running on **AWS EC2** at `http://50.19.129.245:8002`.
+The backend previously ran on Railway, then on a paid AWS EC2 instance (`50.19.129.245:8002`) after Railway usage-based billing became a concern. EC2 itself then became the higher cost — a fixed monthly bill for a low-traffic household app that mostly sits idle. It's been retired in favor of the free Render + Neon setup documented above.
 
-### Current Issue
+If you ever need to look back at how the EC2 setup worked (webhook-based deploys, systemd services, security-group SSH issues), see the git history for this file and for `api/deploy_webhook.py` (removed) — search for the commit that removed the EC2 deploy workflows.
 
-GitHub Actions deployment via SSH is **failing** - the EC2 security group blocks SSH from GitHub Actions IP ranges. The workflow times out without connecting.
+### Decommissioning the old EC2 instance
 
-### Solution Options
+Once Render + Neon is verified working end-to-end (Steps 1-4 above), **stop the EC2 instance** in the AWS console (or terminate it, if you don't intend to reuse it) to stop the charges that prompted this migration. Also revoke/rotate anything EC2-specific: the `DEPLOY_WEBHOOK_SECRET` and `EC2_SSH_KEY` GitHub repo secrets, and the EC2 security group rules, are no longer needed once nothing points at that server.
 
-**Option 1: Webhook-Based Deployment** (Recommended)
-
-Instead of GitHub pushing via SSH, EC2 hosts a webhook that GitHub triggers:
-
-1. **On EC2 server**, set up the webhook service:
-   ```bash
-   ssh ubuntu@50.19.129.245
-   
-   # Generate webhook secret
-   openssl rand -hex 32  # Save this for GitHub
-   
-   # Pull latest code to get webhook script
-   cd /home/ubuntu/meal-plan
-   git pull origin main
-   
-   # Create systemd service
-   sudo tee /etc/systemd/system/deploy-webhook.service > /dev/null <<'EOF'
-   [Unit]
-   Description=Deployment Webhook Service
-   After=network.target
-
-   [Service]
-   Type=simple
-   User=ubuntu
-   WorkingDirectory=/home/ubuntu/meal-plan/api
-   Environment="WEBHOOK_SECRET=PUT_YOUR_SECRET_HERE"
-   ExecStart=/usr/bin/python3 -m uvicorn deploy_webhook:app --host 0.0.0.0 --port 8003
-   Restart=always
-
-   [Install]
-   WantedBy=multi-user.target
-   EOF
-   
-   # Edit to add your secret
-   sudo nano /etc/systemd/system/deploy-webhook.service
-   
-   # Start service
-   sudo systemctl daemon-reload
-   sudo systemctl enable --now deploy-webhook
-   sudo systemctl status deploy-webhook
-   ```
-
-2. **Update EC2 security group** to allow TCP 8003 from GitHub Actions IPs or `0.0.0.0/0`
-
-3. **Add GitHub secret** `DEPLOY_WEBHOOK_SECRET` in repo Settings → Secrets
-
-4. **Disable old workflow**:
-   ```bash
-   git mv .github/workflows/deploy-backend.yml .github/workflows/deploy-backend.yml.disabled
-   ```
-
-5. **Test webhook deployment**:
-   ```bash
-   gh workflow run deploy-backend-webhook.yml
-   gh run watch
-   ```
-
-**Option 2: Fix SSH Access**
-
-1. **Allow GitHub Actions IPs** in EC2 security group (port 22):
-   - `140.82.112.0/20`
-   - `143.55.64.0/20`
-   - `185.199.108.0/22`
-   - `192.30.252.0/22`
-   - Plus several others - see [GitHub's IP ranges](https://api.github.com/meta)
-
-2. **Verify EC2_SSH_KEY secret** is correct in GitHub repo Settings
-
-**Option 3: Manual Deployment** (Current Workaround)
-
-Until automated deployment is fixed:
-
-```bash
-# SSH and pull changes
-ssh ubuntu@50.19.129.245 '/home/ubuntu/deploy.sh'
-
-# Verify deployment
-bash check-backend.sh
-```
-
-### Checking Backend Status
-
-```bash
-# Run diagnostic script
-bash check-backend.sh
-
-# Should show:
-# ✅ Backend is running
-# ✅ Share API: Available (or ❌ Missing if not deployed)
-```
-
-### Deployment Script
-
-The `/home/ubuntu/deploy.sh` script should contain:
-
-```bash
-#!/bin/bash
-set -e
-
-echo "🚀 Starting deployment..."
-cd /home/ubuntu/meal-plan
-
-echo "📥 Pulling latest code..."
-git pull origin main
-
-echo "📦 Installing API dependencies..."
-cd api
-pip install -r requirements.txt --quiet
-
-echo "🔄 Restarting API service..."
-sudo systemctl restart meal-plan-api
-
-echo "✅ Deployment complete!"
-echo "Verify at: http://50.19.129.245:8002/api/health"
-```
+The EC2 setup used a webhook-based deploy (GitHub → EC2-hosted `deploy_webhook.py` → `git pull` + `systemctl restart`), after SSH-from-GitHub-Actions turned out to be blocked by the EC2 security group. That whole apparatus — the webhook server, the systemd service, the security-group rules — is unnecessary with Render, which deploys directly from GitHub with no server-side listener required. The full historical writeup is preserved in this file's git history if you ever need it (`git log -p -- DEPLOYMENT.md`), and `bash check-backend.sh` now checks the Render URL instead of the EC2 IP.
