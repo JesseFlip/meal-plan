@@ -6,14 +6,16 @@
 [build.environment]
   NODE_VERSION = "20"
 
-# Proxy API requests to EC2 backend (avoids mixed content HTTPS/HTTP issue)
+# TEMPORARY fallback while the Render + Neon cutover is in progress.
+# Once VITE_API_URL / VITE_WS_URL on Netlify point at the live Render backend
+# (see DEPLOYMENT.md), the frontend calls it directly — HTTPS/WSS-native, no
+# proxy needed — and these two redirect blocks should be deleted.
 [[redirects]]
   from = "/api/*"
   to = "http://50.19.129.245:8002/api/:splat"
   status = 200
   force = true
 
-# Proxy WebSocket connections to EC2 backend
 [[redirects]]
   from = "/ws"
   to = "http://50.19.129.245:8002/ws"

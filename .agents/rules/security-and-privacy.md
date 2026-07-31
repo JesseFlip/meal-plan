@@ -5,7 +5,7 @@ This is family food data. The bar is: **what would Dorys want?**
 ## Hard rules
 
 1. **No third-party analytics.** No Google Analytics, Segment, Mixpanel, Amplitude, PostHog, Plausible, Fathom — none. Not even self-hosted. We do not measure user behavior.
-2. **No error reporting SaaS.** No Sentry, Rollbar, Bugsnag, Datadog RUM. Errors log to the server (Railway's built-in log stream is enough).
+2. **No error reporting SaaS.** No Sentry, Rollbar, Bugsnag, Datadog RUM. Errors log to the server (Render's built-in log stream is enough).
 3. **No marketing pixels.** Ever.
 4. **No social login.** No "Sign in with Google", no OAuth providers.
 5. **No telemetry pings.** The PWA does not phone home for any reason except to its own API.
@@ -38,7 +38,7 @@ Do not introduce JWT, OAuth, magic links, or user accounts in the MVP.
 
 - Log HTTP method, path, status, and latency on every request.
 - **Do not log request bodies or response bodies by default.** They contain meal text which is user data.
-- Log exceptions with stack traces — these go to stderr → Railway logs.
+- Log exceptions with stack traces — these go to stderr → Render logs.
 - No structured logging service. Plain text is fine.
 
 ## Secrets
@@ -46,7 +46,7 @@ Do not introduce JWT, OAuth, magic links, or user accounts in the MVP.
 - All secrets via environment variables.
 - Never commit `.env`, `.env.local`, or any file with credentials.
 - Use `.env.example` to document required variables (with placeholder values).
-- Railway and Netlify both have built-in secret management; use it.
+- Render and Netlify both have built-in secret management; use it.
 
 ## When in doubt
 

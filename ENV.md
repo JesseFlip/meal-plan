@@ -1,14 +1,15 @@
 # FridgePlan Environment Variables
 
-## Backend (Railway)
+## Backend (Render)
 
 ### Required
 
 ```env
-DATABASE_URL=postgresql://user:password@host:5432/database
-# Railway auto-provisions this. Format:
+DATABASE_URL=postgresql://user:password@host/database?sslmode=require
+# Get this from Neon (neon.tech) — Project → Connection Details.
+# Format:
 # - Development: sqlite:///fridgeplan.db
-# - Production: postgresql://...
+# - Production: postgresql://... (Neon free Postgres; Render has no persistent disk)
 ```
 
 ### Optional
@@ -38,10 +39,10 @@ PIN_SECRET=123456
 ### Required
 
 ```env
-VITE_API_URL=https://web-production-6db11.up.railway.app
-# Your Railway backend URL (without trailing slash)
+VITE_API_URL=https://fridgeplan-api.onrender.com
+# Your Render backend URL (without trailing slash)
 
-VITE_WS_URL=wss://web-production-6db11.up.railway.app/ws
+VITE_WS_URL=wss://fridgeplan-api.onrender.com/ws
 # WebSocket URL for real-time sync
 # Note: wss:// for production (secure), ws:// for local development
 ```
@@ -67,16 +68,25 @@ VITE_WS_URL=ws://localhost:8000/ws
 
 ---
 
-## Railway Deployment
+## Render Deployment
 
-1. Go to your Railway project
-2. Select the backend service
-3. Navigate to **Variables** tab
-4. Add the following:
+1. Go to your Render dashboard → the `fridgeplan-api` service (created from `render.yaml`)
+2. Navigate to **Environment** tab
+3. Add the following:
+   - `DATABASE_URL=<your Neon connection string>` — Render's free plan has no persistent disk, so this must point at Neon (or another external Postgres), not SQLite
    - `ALLOWED_ORIGINS=https://mealp.netlify.app`
    - `PIN_AUTH_ENABLED=false` (or `true` if you want PIN protection)
    - `PIN_SECRET=your_6_digit_pin` (if PIN enabled)
-5. Railway auto-provisions `DATABASE_URL` - **do not override**
+   - `GEMINI_API_KEY=<your key>` (for AI meal generation)
+4. Save — Render redeploys automatically
+
+### Neon Postgres setup
+
+1. Sign up at https://neon.tech (free, no credit card required)
+2. **New Project** → name it `fridgeplan` → note the region (pick one close to Render's, e.g. US East)
+3. Copy the connection string from the project dashboard (**Connection Details** → pick "Pooled connection" for the string, includes `?sslmode=require`)
+4. Paste it into Render as `DATABASE_URL` (above)
+5. Free tier: 0.5GB storage, 100 compute-hours/month, auto-suspends after 5 min idle and resumes in ~1s on the next query — plenty for a low-traffic household app
 
 ---
 
@@ -86,9 +96,9 @@ VITE_WS_URL=ws://localhost:8000/ws
 2. Navigate to **Site settings** → **Environment variables**
 3. Add the following:
    - Key: `VITE_API_URL`
-     - Value: `https://web-production-6db11.up.railway.app`
+     - Value: `https://fridgeplan-api.onrender.com`
    - Key: `VITE_WS_URL`
-     - Value: `wss://web-production-6db11.up.railway.app/ws`
+     - Value: `wss://fridgeplan-api.onrender.com/ws`
 
 ---
 
@@ -99,7 +109,7 @@ VITE_WS_URL=ws://localhost:8000/ws
 - [ ] Set `ALLOWED_ORIGINS` to your actual frontend domain (never use `*` in production)
 - [ ] Enable `PIN_AUTH_ENABLED=true` if deploying publicly
 - [ ] Use strong 6-digit PIN (not `123456`)
-- [ ] Ensure Railway DATABASE_URL is PostgreSQL (not SQLite)
+- [ ] Ensure Render's DATABASE_URL points at Neon PostgreSQL (not SQLite — Render's free plan has no persistent disk)
 - [ ] Use `wss://` (secure WebSocket) in `VITE_WS_URL`
 
 ### Household Privacy
@@ -116,8 +126,9 @@ VITE_WS_URL=ws://localhost:8000/ws
 ### Backend Health Check
 
 ```bash
-curl https://web-production-6db11.up.railway.app/api/health
+curl https://fridgeplan-api.onrender.com/api/health
 # Should return: {"ok": true, "ts": "2026-05-25T..."}
+# First request after 15 min idle takes ~30-50s (free plan cold start)
 ```
 
 ### Frontend Build Test
@@ -138,8 +149,8 @@ npm run build
 **Symptom**: `Access-Control-Allow-Origin` errors in browser console
 
 **Solution**:
-1. Check `ALLOWED_ORIGINS` on Railway includes your Netlify domain
-2. Restart Railway service after changing env vars
+1. Check `ALLOWED_ORIGINS` on Render includes your Netlify domain
+2. Render redeploys automatically after changing env vars — wait for it to finish
 3. Verify no typos (no trailing slashes, correct protocol)
 
 ### WebSocket Connection Fails
@@ -148,7 +159,7 @@ npm run build
 
 **Solution**:
 1. Check `VITE_WS_URL` uses `wss://` (not `http://`)
-2. Verify Railway backend is running (`/api/health` returns 200)
+2. Verify Render backend is running (`/api/health` returns 200) — it may need ~30-50s to wake from sleep
 3. Check browser console for WebSocket errors
 
 ### PIN Authentication Fails
@@ -157,7 +168,7 @@ npm run build
 
 **Solution**:
 1. Verify `PIN_SECRET` matches on backend and frontend request headers
-2. Check `PIN_AUTH_ENABLED=true` on Railway
+2. Check `PIN_AUTH_ENABLED=true` on Render
 3. Frontend must send `X-FridgePlan-PIN` header (not yet implemented in UI)
 
 ---
