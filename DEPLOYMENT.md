@@ -1,6 +1,8 @@
 # Deployment Guide
 
 > **NOTE**: This project has moved through three backends: Railway → a paid EC2 instance → **Render (free) + Neon (free Postgres)**, the current setup. EC2 was retired because it cost real money for a low-traffic household app; Render + Neon covers the same needs at $0/month. See [Retired: EC2 & Railway](#retired-ec2--railway) for history.
+>
+> **Cutover in progress**: `netlify.toml` still has a temporary `/api/*` and `/ws` proxy to the old EC2 IP so the live site keeps working until Netlify's `VITE_API_URL`/`VITE_WS_URL` are pointed at Render (Step 2/3 below). Once that's done and verified, delete those two redirect blocks — see the decommissioning note at the bottom of this file.
 
 End-to-end setup so merges to `main` auto-deploy to a live URL. Three accounts, ~30 minutes the first time, ~0 minutes after. All free.
 
@@ -239,6 +241,11 @@ If you ever need to look back at how the EC2 setup worked (webhook-based deploys
 
 ### Decommissioning the old EC2 instance
 
-Once Render + Neon is verified working end-to-end (Steps 1-4 above), **stop the EC2 instance** in the AWS console (or terminate it, if you don't intend to reuse it) to stop the charges that prompted this migration. Also revoke/rotate anything EC2-specific: the `DEPLOY_WEBHOOK_SECRET` and `EC2_SSH_KEY` GitHub repo secrets, and the EC2 security group rules, are no longer needed once nothing points at that server.
+Once Render + Neon is verified working end-to-end (Steps 1-4 above):
+
+1. **Remove the temporary proxy** — delete the `/api/*` and `/ws` redirect blocks from `netlify.toml` (they're clearly marked) and confirm `VITE_API_URL`/`VITE_WS_URL` on Netlify point at the Render URL, not blank/relative paths. Push and let Netlify redeploy.
+2. **Verify** the live site still works end-to-end (edit a cell on one device, confirm it syncs to another).
+3. **Stop the EC2 instance** in the AWS console (or terminate it, if you don't intend to reuse it) to stop the charges that prompted this migration.
+4. **Revoke/rotate anything EC2-specific**: the `DEPLOY_WEBHOOK_SECRET` and `EC2_SSH_KEY` GitHub repo secrets, and the EC2 security group rules, are no longer needed once nothing points at that server.
 
 The EC2 setup used a webhook-based deploy (GitHub → EC2-hosted `deploy_webhook.py` → `git pull` + `systemctl restart`), after SSH-from-GitHub-Actions turned out to be blocked by the EC2 security group. That whole apparatus — the webhook server, the systemd service, the security-group rules — is unnecessary with Render, which deploys directly from GitHub with no server-side listener required. The full historical writeup is preserved in this file's git history if you ever need it (`git log -p -- DEPLOYMENT.md`), and `bash check-backend.sh` now checks the Render URL instead of the EC2 IP.

@@ -6,8 +6,21 @@
 [build.environment]
   NODE_VERSION = "20"
 
-# The backend (Render) is HTTPS/WSS-native, so the frontend calls it directly
-# via VITE_API_URL / VITE_WS_URL — no proxy redirect needed here.
+# TEMPORARY fallback while the Render + Neon cutover is in progress.
+# Once VITE_API_URL / VITE_WS_URL on Netlify point at the live Render backend
+# (see DEPLOYMENT.md), the frontend calls it directly — HTTPS/WSS-native, no
+# proxy needed — and these two redirect blocks should be deleted.
+[[redirects]]
+  from = "/api/*"
+  to = "http://50.19.129.245:8002/api/:splat"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/ws"
+  to = "http://50.19.129.245:8002/ws"
+  status = 200
+  force = true
 
 # SPA fallback — let React Router (if added later) handle routes
 [[redirects]]
