@@ -86,6 +86,7 @@ gh repo create JesseFlip/fridgeplan --private --source=. --push
 - If Postgres connection fails: double check you copied the *pooled* connection string from Neon (not the direct one) and that it includes `?sslmode=require`.
 - If the backend seems to "reset" data periodically: you're still on SQLite. Render's free plan has no persistent disk — `DATABASE_URL` must point at Neon.
 - If WebSocket fails in production but works locally: Render supports WebSockets natively, but the client must use `wss://` (not `ws://`), and the first connection after idle will hang for ~30-50s while the service wakes up.
+- If the build fails with `pydantic.errors.PydanticUserError: Field 'id' requires a type annotation` (fields that clearly *do* have annotations): Render defaulted to a Python version newer than `sqlmodel==0.0.22` supports. `api/.python-version` pins this to 3.12 (matching CI) — if it's missing or Render isn't picking it up, that's the fix, not the model code.
 
 ---
 
